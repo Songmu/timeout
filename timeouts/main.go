@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"syscall"
 
 	"github.com/Songmu/timeouts"
 )
@@ -9,6 +10,7 @@ import (
 func main() {
 	tio := &timeouts.Timeouts{
 		Command: "test/countup.pl",
+		Signal:  syscall.SIGTERM,
 	}
 	exit := tio.Run()
 

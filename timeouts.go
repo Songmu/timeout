@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 type Timeouts struct {
@@ -69,18 +70,60 @@ func (tio *Timeouts) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.
 
 func (tio *Timeouts) handleTimeout(cmd *exec.Cmd) int {
 	exit := 0
-	err := cmd.Wait()
-	if err != nil {
-		if exiterr, ok := err.(*exec.ExitError); ok {
-			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-				exit = status.ExitStatus()
+	timedOut := false
+	exitChan := getExitChan(cmd)
+
+	if tio.Duration > 0 {
+		select {
+		case exit = <-exitChan:
+		case <-time.After(time.Duration(tio.Duration) * time.Second):
+			cmd.Process.Signal(tio.Signal)
+			timedOut = true
+			exit = 124
+		}
+	} else {
+		exit = <-exitChan
+	}
+
+	killed := false
+	if timedOut {
+		tmpExit := 0
+		if tio.KillAfter > 0 {
+			select {
+			case tmpExit = <-exitChan:
+			case <-time.After(time.Duration(tio.KillAfter) * time.Second):
+				cmd.Process.Kill()
+				killed = true
+				exit = 137
 			}
 		} else {
-			exit = -1
+			tmpExit = <-exitChan
+		}
+		if tio.PreserveStatus && !killed {
+			exit = tmpExit
 		}
 	}
 
 	return exit
+}
+
+func getExitChan(cmd *exec.Cmd) chan int {
+	ch := make(chan int)
+	go func() {
+		exit := 0
+		err := cmd.Wait()
+		if err != nil {
+			if exiterr, ok := err.(*exec.ExitError); ok {
+				if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+					exit = status.ExitStatus()
+				}
+			} else {
+				exit = -1
+			}
+		}
+		ch <- exit
+	}()
+	return ch
 }
 
 func readAndOut(r io.Reader, f *os.File) {

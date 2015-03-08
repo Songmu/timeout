@@ -1,6 +1,9 @@
 package timeouts
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestParseDuration(t *testing.T) {
 	v, err := parseDuration("55s")
@@ -45,6 +48,32 @@ func TestParseDuration(t *testing.T) {
 
 	_, err = parseDuration("1w")
 	if err == nil {
+		t.Errorf("something wrong")
+	}
+}
+
+func TestRun(t *testing.T) {
+	tio := &Timeouts{
+		Command:     "/bin/sh",
+		CommandArgs: []string{"-c", "echo 1"},
+	}
+	exit := tio.Run()
+
+	if exit != 0 {
+		t.Errorf("something wrong")
+	}
+}
+
+func TestRunTimeout(t *testing.T) {
+	tio := &Timeouts{
+		Command:     "/bin/sh",
+		CommandArgs: []string{"-c", "sleep 3"},
+		Duration:    1,
+		Signal:      os.Interrupt,
+	}
+	exit := tio.Run()
+
+	if exit != 124 {
 		t.Errorf("something wrong")
 	}
 }
