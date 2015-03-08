@@ -25,25 +25,13 @@ func (tio *Timeouts) Run() int {
 	if err != nil {
 		panic("something went wrong")
 	}
-
 	defer func() {
 		stdoutPipe.Close()
 		stderrPipe.Close()
 	}()
 
-	go func(r io.Reader) {
-		s := bufio.NewScanner(r)
-		for s.Scan() {
-			fmt.Println(s.Text())
-		}
-	}(stdoutPipe)
-
-	go func(r io.Reader) {
-		s := bufio.NewScanner(r)
-		for s.Scan() {
-			fmt.Fprintln(os.Stderr, s.Text())
-		}
-	}(stderrPipe)
+	go readAndOut(stdoutPipe, os.Stdout)
+	go readAndOut(stderrPipe, os.Stderr)
 
 	return <-ch
 }
@@ -88,6 +76,13 @@ func (tio *Timeouts) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.
 	}(cmd)
 
 	return
+}
+
+func readAndOut(r io.Reader, f *os.File) {
+	s := bufio.NewScanner(r)
+	for s.Scan() {
+		fmt.Fprintln(f, s.Text())
+	}
 }
 
 var durRe = regexp.MustCompile("^([0-9]+)([smhd])?$")
