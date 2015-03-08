@@ -21,6 +21,11 @@ type Timeouts struct {
 	CommandArgs    []string
 }
 
+const (
+	exitTimedOut = 124
+	exitKilled   = 137
+)
+
 func (tio *Timeouts) Run() int {
 	ch, stdoutPipe, stderrPipe, err := tio.RunCommand()
 	if err != nil {
@@ -79,7 +84,7 @@ func (tio *Timeouts) handleTimeout(cmd *exec.Cmd) int {
 		case <-time.After(time.Duration(tio.Duration) * time.Second):
 			cmd.Process.Signal(tio.Signal)
 			timedOut = true
-			exit = 124
+			exit = exitTimedOut
 		}
 	} else {
 		exit = <-exitChan
@@ -94,7 +99,7 @@ func (tio *Timeouts) handleTimeout(cmd *exec.Cmd) int {
 			case <-time.After(time.Duration(tio.KillAfter) * time.Second):
 				cmd.Process.Kill()
 				killed = true
-				exit = 137
+				exit = exitKilled
 			}
 		} else {
 			tmpExit = <-exitChan
