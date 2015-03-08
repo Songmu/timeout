@@ -23,7 +23,7 @@ type Timeouts struct {
 func (tio *Timeouts) Run() int {
 	ch, stdoutPipe, stderrPipe, err := tio.RunCommand()
 	if err != nil {
-		panic("something went wrong")
+		panic(fmt.Sprintf("something went wrong: %s", err))
 	}
 	defer func() {
 		stdoutPipe.Close()
@@ -60,22 +60,27 @@ func (tio *Timeouts) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.
 	}
 
 	exitChan = make(chan int)
-	go func(cmd *exec.Cmd) {
-		exit := 0
-		err := cmd.Wait()
-		if err != nil {
-			if exiterr, ok := err.(*exec.ExitError); ok {
-				if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-					exit = status.ExitStatus()
-				}
-			} else {
-				exit = -1
-			}
-		}
-		exitChan <- exit
-	}(cmd)
+	go func() {
+		exitChan <- tio.handleTimeout(cmd)
+	}()
 
 	return
+}
+
+func (tio *Timeouts) handleTimeout(cmd *exec.Cmd) int {
+	exit := 0
+	err := cmd.Wait()
+	if err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				exit = status.ExitStatus()
+			}
+		} else {
+			exit = -1
+		}
+	}
+
+	return exit
 }
 
 func readAndOut(r io.Reader, f *os.File) {
