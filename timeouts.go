@@ -24,7 +24,7 @@ type Timeouts struct {
 func (tio *Timeouts) Run() int {
 	ch, stdoutPipe, stderrPipe, err := tio.RunCommand()
 	if err != nil {
-		panic(fmt.Sprintf("something went wrong: %s", err))
+		panic(fmt.Sprintf("something went wrong: %+v", err))
 	}
 	defer func() {
 		stdoutPipe.Close()

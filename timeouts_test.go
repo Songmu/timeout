@@ -2,6 +2,7 @@ package timeouts
 
 import (
 	"os"
+	"syscall"
 	"testing"
 )
 
@@ -74,6 +75,52 @@ func TestRunTimeout(t *testing.T) {
 	exit := tio.Run()
 
 	if exit != 124 {
+		t.Errorf("something wrong")
+	}
+}
+
+func TestRunPreserveStatus(t *testing.T) {
+	tio := &Timeouts{
+		Command:        "perl",
+		CommandArgs:    []string{"test/exit_with_23.pl"},
+		Duration:       1,
+		Signal:         syscall.SIGTERM,
+		PreserveStatus: true,
+	}
+	exit := tio.Run()
+
+	if exit != 23 {
+		t.Errorf("something wrong")
+	}
+}
+
+func TestPreserveStatus(t *testing.T) {
+	tio := &Timeouts{
+		Command:        "perl",
+		CommandArgs:    []string{"test/exit_with_23.pl"},
+		Duration:       1,
+		Signal:         syscall.SIGTERM,
+		PreserveStatus: true,
+	}
+	exit := tio.Run()
+
+	if exit != 23 {
+		t.Errorf("something wrong")
+	}
+}
+
+func TestKillAfter(t *testing.T) {
+	tio := &Timeouts{
+		Command:        "perl",
+		CommandArgs:    []string{"test/ignore_sigterm.pl"},
+		Signal:         syscall.SIGTERM,
+		Duration:       1,
+		KillAfter:      1,
+		PreserveStatus: true,
+	}
+	exit := tio.Run()
+
+	if exit != 137 {
 		t.Errorf("something wrong")
 	}
 }
