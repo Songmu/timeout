@@ -138,7 +138,7 @@ func readAndOut(r io.Reader, f *os.File) {
 	}
 }
 
-var durRe = regexp.MustCompile("^([0-9]+)([smhd])?$")
+var durRe = regexp.MustCompile(`^([0-9]+)([smhd])?$`)
 
 func parseDuration(durStr string) (uint64, error) {
 	matches := durRe.FindStringSubmatch(durStr)
