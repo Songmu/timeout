@@ -80,12 +80,12 @@ func TestRunTimeout(t *testing.T) {
 }
 
 func TestPreserveStatus(t *testing.T) {
-	tio := (&Timeout{
+	tio := &Timeout{
 		Command:        "perl",
 		CommandArgs:    []string{"test/exit_with_23.pl"},
 		Duration:       1,
 		PreserveStatus: true,
-	}).Init()
+	}
 
 	exit := tio.Run()
 	if exit != 23 {

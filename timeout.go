@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -21,16 +22,23 @@ type Timeout struct {
 	CommandArgs    []string
 }
 
+var defaultSignal = func() os.Signal {
+	if runtime.GOOS == "windows" {
+		return os.Interrupt
+	}
+	return syscall.SIGTERM
+}()
+
 const (
 	exitTimedOut = 124
 	exitKilled   = 137
 )
 
-func (tio *Timeout) Init() *Timeout {
+func (tio *Timeout) signal() os.Signal {
 	if tio.Signal == nil {
-		tio.Signal = syscall.SIGTERM
+		return defaultSignal
 	}
-	return tio
+	return tio.Signal
 }
 
 func (tio *Timeout) Run() int {
@@ -89,7 +97,7 @@ func (tio *Timeout) handleTimeout(cmd *exec.Cmd) int {
 		select {
 		case exit = <-exitChan:
 		case <-time.After(time.Duration(tio.Duration) * time.Second):
-			cmd.Process.Signal(tio.Signal)
+			cmd.Process.Signal(tio.signal())
 			timedOut = true
 			exit = exitTimedOut
 		}
