@@ -18,8 +18,7 @@ type Timeout struct {
 	Duration       uint64
 	KillAfter      uint64
 	Signal         os.Signal
-	Command        string
-	CommandArgs    []string
+	Cmd            *exec.Cmd
 }
 
 var defaultSignal = func() os.Signal {
@@ -57,13 +56,8 @@ func (tio *Timeout) Run() int {
 	return <-ch
 }
 
-func (tio *Timeout) prepareCmd() *exec.Cmd {
-	args := tio.CommandArgs
-	return exec.Command(tio.Command, args...)
-}
-
 func (tio *Timeout) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.ReadCloser, err error) {
-	cmd := tio.prepareCmd()
+	cmd := tio.Cmd
 	if err != nil {
 		return
 	}
