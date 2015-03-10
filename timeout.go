@@ -26,6 +26,13 @@ const (
 	exitKilled   = 137
 )
 
+func (tio *Timeout) Init() *Timeout {
+	if tio.Signal == nil {
+		tio.Signal = syscall.SIGTERM
+	}
+	return tio
+}
+
 func (tio *Timeout) Run() int {
 	ch, stdoutPipe, stderrPipe, err := tio.RunCommand()
 	if err != nil {

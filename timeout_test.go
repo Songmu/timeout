@@ -79,31 +79,15 @@ func TestRunTimeout(t *testing.T) {
 	}
 }
 
-func TestRunPreserveStatus(t *testing.T) {
-	tio := &Timeout{
-		Command:        "perl",
-		CommandArgs:    []string{"test/exit_with_23.pl"},
-		Duration:       1,
-		Signal:         syscall.SIGTERM,
-		PreserveStatus: true,
-	}
-	exit := tio.Run()
-
-	if exit != 23 {
-		t.Errorf("something wrong")
-	}
-}
-
 func TestPreserveStatus(t *testing.T) {
-	tio := &Timeout{
+	tio := (&Timeout{
 		Command:        "perl",
 		CommandArgs:    []string{"test/exit_with_23.pl"},
 		Duration:       1,
-		Signal:         syscall.SIGTERM,
 		PreserveStatus: true,
-	}
-	exit := tio.Run()
+	}).Init()
 
+	exit := tio.Run()
 	if exit != 23 {
 		t.Errorf("something wrong")
 	}
