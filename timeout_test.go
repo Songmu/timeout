@@ -1,4 +1,4 @@
-package timeouts
+package timeout
 
 import (
 	"os"
@@ -54,7 +54,7 @@ func TestParseDuration(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	tio := &Timeouts{
+	tio := &Timeout{
 		Command:     "/bin/sh",
 		CommandArgs: []string{"-c", "echo 1"},
 	}
@@ -66,7 +66,7 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunTimeout(t *testing.T) {
-	tio := &Timeouts{
+	tio := &Timeout{
 		Command:     "/bin/sh",
 		CommandArgs: []string{"-c", "sleep 3"},
 		Duration:    1,
@@ -80,7 +80,7 @@ func TestRunTimeout(t *testing.T) {
 }
 
 func TestRunPreserveStatus(t *testing.T) {
-	tio := &Timeouts{
+	tio := &Timeout{
 		Command:        "perl",
 		CommandArgs:    []string{"test/exit_with_23.pl"},
 		Duration:       1,
@@ -95,7 +95,7 @@ func TestRunPreserveStatus(t *testing.T) {
 }
 
 func TestPreserveStatus(t *testing.T) {
-	tio := &Timeouts{
+	tio := &Timeout{
 		Command:        "perl",
 		CommandArgs:    []string{"test/exit_with_23.pl"},
 		Duration:       1,
@@ -110,7 +110,7 @@ func TestPreserveStatus(t *testing.T) {
 }
 
 func TestKillAfter(t *testing.T) {
-	tio := &Timeouts{
+	tio := &Timeout{
 		Command:        "perl",
 		CommandArgs:    []string{"test/ignore_sigterm.pl"},
 		Signal:         syscall.SIGTERM,

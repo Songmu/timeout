@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"syscall"
 
-	"github.com/Songmu/timeouts"
+	"github.com/Songmu/timeout"
 )
 
 func main() {
-	tio := &timeouts.Timeouts{
-		Command: "test/countup.p",
+	tio := &timeout.Timeout{
+		Command: "test/countup.pl",
 		Signal:  syscall.SIGTERM,
 	}
 	exit := tio.Run()

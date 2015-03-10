@@ -1,4 +1,4 @@
-package timeouts
+package timeout
 
 import (
 	"bufio"
@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-type Timeouts struct {
+type Timeout struct {
 	PreserveStatus bool
 	Duration       uint64
 	KillAfter      uint64
@@ -26,7 +26,7 @@ const (
 	exitKilled   = 137
 )
 
-func (tio *Timeouts) Run() int {
+func (tio *Timeout) Run() int {
 	ch, stdoutPipe, stderrPipe, err := tio.RunCommand()
 	if err != nil {
 		panic(fmt.Sprintf("something went wrong: %+v", err))
@@ -42,12 +42,12 @@ func (tio *Timeouts) Run() int {
 	return <-ch
 }
 
-func (tio *Timeouts) prepareCmd() *exec.Cmd {
+func (tio *Timeout) prepareCmd() *exec.Cmd {
 	args := tio.CommandArgs
 	return exec.Command(tio.Command, args...)
 }
 
-func (tio *Timeouts) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.ReadCloser, err error) {
+func (tio *Timeout) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.ReadCloser, err error) {
 	cmd := tio.prepareCmd()
 	if err != nil {
 		return
@@ -73,7 +73,7 @@ func (tio *Timeouts) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.
 	return
 }
 
-func (tio *Timeouts) handleTimeout(cmd *exec.Cmd) int {
+func (tio *Timeout) handleTimeout(cmd *exec.Cmd) int {
 	exit := 0
 	timedOut := false
 	exitChan := getExitChan(cmd)
