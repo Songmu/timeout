@@ -28,9 +28,13 @@ var defaultSignal = func() os.Signal {
 	return syscall.SIGTERM
 }()
 
+// exit statuses are same with GNU timeout
 const (
-	exitTimedOut = 124
-	exitKilled   = 137
+	exitTimedOut          = 124
+	exitUnknownErr        = 125
+	exitCommandNotInvoked = 126
+	exitCommandNotFound   = 127
+	exitKilled            = 137
 )
 
 func (tio *Timeout) signal() os.Signal {
@@ -43,7 +47,8 @@ func (tio *Timeout) signal() os.Signal {
 func (tio *Timeout) Run() int {
 	ch, stdoutPipe, stderrPipe, err := tio.RunCommand()
 	if err != nil {
-		panic(fmt.Sprintf("something went wrong: %+v", err))
+		fmt.Fprintln(os.Stderr, err)
+		return err.ExitCode
 	}
 	defer func() {
 		stdoutPipe.Close()
@@ -56,18 +61,52 @@ func (tio *Timeout) Run() int {
 	return <-ch
 }
 
-func (tio *Timeout) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.ReadCloser, err error) {
+type tmError struct {
+	ExitCode int
+	message  string
+}
+
+func (err *tmError) Error() string {
+	return err.message
+}
+
+func (tio *Timeout) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.ReadCloser, tmerr *tmError) {
 	cmd := tio.Cmd
 
-	stdoutPipe, err = cmd.StdoutPipe()
+	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
+		tmerr = &tmError{
+			ExitCode: exitUnknownErr,
+			message:  fmt.Sprintf("unknown error: %s", err),
+		}
 		return
 	}
 	stderrPipe, err = cmd.StderrPipe()
 	if err != nil {
+		tmerr = &tmError{
+			ExitCode: exitUnknownErr,
+			message:  fmt.Sprintf("unknown error: %s", err),
+		}
 		return
 	}
 	if err = cmd.Start(); err != nil {
+		switch {
+		case os.IsNotExist(err):
+			tmerr = &tmError{
+				ExitCode: exitCommandNotFound,
+				message:  err.Error(),
+			}
+		case os.IsPermission(err):
+			tmerr = &tmError{
+				ExitCode: exitCommandNotInvoked,
+				message:  err.Error(),
+			}
+		default:
+			tmerr = &tmError{
+				ExitCode: exitUnknownErr,
+				message:  fmt.Sprintf("unknown error: %s", err),
+			}
+		}
 		return
 	}
 

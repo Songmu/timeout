@@ -105,3 +105,27 @@ func TestKillAfter(t *testing.T) {
 		t.Errorf("something wrong")
 	}
 }
+
+func TestCommandCannotBeInvoked(t *testing.T) {
+	tio := &Timeout{
+		Cmd:      exec.Command("test/dummy"),
+		Duration: 1,
+	}
+	exit := tio.Run()
+
+	if exit != 126 {
+		t.Errorf("something wrong")
+	}
+}
+
+func TestCommandNotFound(t *testing.T) {
+	tio := &Timeout{
+		Cmd:      exec.Command("test/ignore_sigterm.pl-xxxxxxxxxxxxxxxxxxxxx"),
+		Duration: 1,
+	}
+	exit := tio.Run()
+
+	if exit != 127 {
+		t.Errorf("something wrong")
+	}
+}
