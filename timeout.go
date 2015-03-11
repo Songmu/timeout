@@ -28,14 +28,52 @@ var defaultSignal = func() os.Signal {
 	return syscall.SIGTERM
 }()
 
+type exitCode int
+
 // exit statuses are same with GNU timeout
 const (
-	exitTimedOut          = 124
-	exitUnknownErr        = 125
-	exitCommandNotInvoked = 126
-	exitCommandNotFound   = 127
-	exitKilled            = 137
+	exitNormal            exitCode = 0
+	exitTimedOut                   = 124
+	exitUnknownErr                 = 125
+	exitCommandNotInvoked          = 126
+	exitCommandNotFound            = 127
+	exitKilled                     = 137
 )
+
+type tmError struct {
+	ExitCode exitCode
+	message  string
+}
+
+func (err *tmError) Error() string {
+	return err.message
+}
+
+type exitState struct {
+	ExitCode exitCode
+	ExitType exitType
+}
+
+type exitType int
+
+const (
+	normal exitType = iota + 1
+	timedOut
+	killed
+)
+
+func (eTyp exitType) String() string {
+	switch eTyp {
+	case normal:
+		return "normal"
+	case timedOut:
+		return "timeout"
+	case killed:
+		return "killed"
+	default:
+		return "unknown"
+	}
+}
 
 func (tio *Timeout) signal() os.Signal {
 	if tio.Signal == nil {
@@ -44,7 +82,7 @@ func (tio *Timeout) signal() os.Signal {
 	return tio.Signal
 }
 
-func (tio *Timeout) Run() int {
+func (tio *Timeout) Run() exitCode {
 	ch, stdoutPipe, stderrPipe, err := tio.RunCommand()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -61,16 +99,7 @@ func (tio *Timeout) Run() int {
 	return <-ch
 }
 
-type tmError struct {
-	ExitCode int
-	message  string
-}
-
-func (err *tmError) Error() string {
-	return err.message
-}
-
-func (tio *Timeout) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.ReadCloser, tmerr *tmError) {
+func (tio *Timeout) RunCommand() (exitChan chan exitCode, stdoutPipe, stderrPipe io.ReadCloser, tmerr *tmError) {
 	cmd := tio.Cmd
 
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -110,7 +139,7 @@ func (tio *Timeout) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.R
 		return
 	}
 
-	exitChan = make(chan int)
+	exitChan = make(chan exitCode)
 	go func() {
 		exitChan <- tio.handleTimeout()
 	}()
@@ -118,8 +147,8 @@ func (tio *Timeout) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.R
 	return
 }
 
-func (tio *Timeout) handleTimeout() int {
-	exit := 0
+func (tio *Timeout) handleTimeout() exitCode {
+	exit := exitNormal
 	cmd := tio.Cmd
 	timedOut := false
 	exitChan := getExitChan(cmd)
@@ -138,7 +167,7 @@ func (tio *Timeout) handleTimeout() int {
 
 	killed := false
 	if timedOut {
-		tmpExit := 0
+		tmpExit := exitNormal
 		if tio.KillAfter > 0 {
 			select {
 			case tmpExit = <-exitChan:
@@ -158,8 +187,8 @@ func (tio *Timeout) handleTimeout() int {
 	return exit
 }
 
-func getExitChan(cmd *exec.Cmd) chan int {
-	ch := make(chan int)
+func getExitChan(cmd *exec.Cmd) chan exitCode {
+	ch := make(chan exitCode)
 	go func() {
 		err := cmd.Wait()
 		ch <- resolveExitCode(err)
@@ -167,16 +196,17 @@ func getExitChan(cmd *exec.Cmd) chan int {
 	return ch
 }
 
-func resolveExitCode(err error) int {
+func resolveExitCode(err error) exitCode {
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-				return status.ExitStatus()
+				return exitCode(status.ExitStatus())
 			}
 		}
-		return -1 // XXX
+		// XXX The exit codes in some platforms aren't integer. e.g. plan9.
+		return exitCode(-1)
 	}
-	return 0
+	return exitNormal
 }
 
 func readAndOut(r io.Reader, f *os.File) {
