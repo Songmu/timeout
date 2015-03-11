@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -167,7 +168,7 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 			ex.Code = exitCode
 			ex.Type = ExitTypeNormal
 		case <-time.After(time.Duration(tio.Duration) * time.Second):
-			cmd.Process.Signal(tio.signal())
+			cmd.Process.Signal(tio.signal()) // XXX error handling
 			ex.Code = exitTimedOut
 			ex.Type = ExitTypeTimedOut
 		}
@@ -216,7 +217,7 @@ func resolveCode(err error) int {
 				return status.ExitStatus()
 			}
 		}
-		// XXX The exit codes in some platforms aren't integer. e.g. plan9.
+		// The exit codes in some platforms aren't integer. e.g. plan9.
 		return -1
 	}
 	return exitNormal
@@ -231,7 +232,7 @@ func readAndOut(r io.Reader, f *os.File) {
 
 var durRe = regexp.MustCompile(`^([0-9]+)([smhd])?$`)
 
-func parseDuration(durStr string) (uint64, error) {
+func ParseDuration(durStr string) (uint64, error) {
 	matches := durRe.FindStringSubmatch(durStr)
 	if len(matches) == 0 {
 		return 0, fmt.Errorf("duration format invalid: %s", durStr)
@@ -248,6 +249,27 @@ func parseDuration(durStr string) (uint64, error) {
 	case "d":
 		return base * 60 * 60 * 24, nil
 	default:
-		return 0, fmt.Errorf("something went wrong")
+		return 0, fmt.Errorf("invalid time interval `%s`", durStr)
+	}
+}
+
+func ParseSignal(sigStr string) (os.Signal, error) {
+	switch strings.ToUpper(sigStr) {
+	case "":
+		return defaultSignal, nil
+	case "HUP", "1":
+		return syscall.SIGHUP, nil
+	case "INT", "2":
+		return os.Interrupt, nil
+	case "QUIT", "3":
+		return syscall.SIGQUIT, nil
+	case "KILL", "9":
+		return os.Kill, nil
+	case "ALRM", "14":
+		return syscall.SIGALRM, nil
+	case "TERM", "15":
+		return syscall.SIGTERM, nil
+	default:
+		return nil, fmt.Errorf("%s: invalid signal", sigStr)
 	}
 }

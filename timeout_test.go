@@ -84,7 +84,7 @@ func TestCommandNotFound(t *testing.T) {
 }
 
 func TestParseDuration(t *testing.T) {
-	v, err := parseDuration("55s")
+	v, err := ParseDuration("55s")
 	if err != nil {
 		t.Errorf("something wrong")
 	}
@@ -92,7 +92,7 @@ func TestParseDuration(t *testing.T) {
 		t.Errorf("parse failed!")
 	}
 
-	v, err = parseDuration("55")
+	v, err = ParseDuration("55")
 	if err != nil {
 		t.Errorf("something wrong")
 	}
@@ -100,7 +100,7 @@ func TestParseDuration(t *testing.T) {
 		t.Errorf("parse failed!")
 	}
 
-	v, err = parseDuration("10m")
+	v, err = ParseDuration("10m")
 	if err != nil {
 		t.Errorf("something wrong")
 	}
@@ -108,7 +108,7 @@ func TestParseDuration(t *testing.T) {
 		t.Errorf("parse failed!")
 	}
 
-	v, err = parseDuration("1h")
+	v, err = ParseDuration("1h")
 	if err != nil {
 		t.Errorf("something wrong")
 	}
@@ -116,7 +116,7 @@ func TestParseDuration(t *testing.T) {
 		t.Errorf("parse failed!")
 	}
 
-	v, err = parseDuration("1d")
+	v, err = ParseDuration("1d")
 	if err != nil {
 		t.Errorf("something wrong")
 	}
@@ -124,9 +124,8 @@ func TestParseDuration(t *testing.T) {
 		t.Errorf("parse failed!")
 	}
 
-	_, err = parseDuration("1w")
+	_, err = ParseDuration("1w")
 	if err == nil {
 		t.Errorf("something wrong")
 	}
 }
-
