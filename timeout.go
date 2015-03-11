@@ -47,38 +47,38 @@ func (err *tmError) Error() string {
 	return err.message
 }
 
-type exit struct {
+type ExitStatus struct {
 	Code int
 	Type exitType
 }
 
-func (ex exit) String() string {
+func (ex ExitStatus) String() string {
 	return fmt.Sprintf("exitCode: %d, type: %s", ex.Code, ex.Type)
 }
 
-func (ex exit) isTimedOut() bool {
-	return ex.Type == exitTypeTimedOut
+func (ex ExitStatus) isTimedOut() bool {
+	return ex.Type == ExitTypeTimedOut
 }
 
-func (ex exit) isKilled() bool {
-	return ex.Type == exitTypeKilled
+func (ex ExitStatus) isKilled() bool {
+	return ex.Type == ExitTypeKilled
 }
 
 type exitType int
 
 const (
-	exitTypeNormal exitType = iota + 1
-	exitTypeTimedOut
-	exitTypeKilled
+	ExitTypeNormal exitType = iota + 1
+	ExitTypeTimedOut
+	ExitTypeKilled
 )
 
 func (eTyp exitType) String() string {
 	switch eTyp {
-	case exitTypeNormal:
+	case ExitTypeNormal:
 		return "normal"
-	case exitTypeTimedOut:
+	case ExitTypeTimedOut:
 		return "timeout"
-	case exitTypeKilled:
+	case ExitTypeKilled:
 		return "killed"
 	default:
 		return "unknown"
@@ -110,7 +110,7 @@ func (tio *Timeout) Run() int {
 	return int(exitSt.Code)
 }
 
-func (tio *Timeout) RunCommand() (exitChan chan exit, stdoutPipe, stderrPipe io.ReadCloser, tmerr *tmError) {
+func (tio *Timeout) RunCommand() (exitChan chan ExitStatus, stdoutPipe, stderrPipe io.ReadCloser, tmerr *tmError) {
 	cmd := tio.Cmd
 
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -150,7 +150,7 @@ func (tio *Timeout) RunCommand() (exitChan chan exit, stdoutPipe, stderrPipe io.
 		return
 	}
 
-	exitChan = make(chan exit)
+	exitChan = make(chan ExitStatus)
 	go func() {
 		exitChan <- tio.handleTimeout()
 	}()
@@ -158,25 +158,24 @@ func (tio *Timeout) RunCommand() (exitChan chan exit, stdoutPipe, stderrPipe io.
 	return
 }
 
-func (tio *Timeout) handleTimeout() exit {
-	var ex exit
+func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 	cmd := tio.Cmd
 	exitChan := getExitChan(cmd)
 	if tio.Duration > 0 {
 		select {
 		case exitCode := <-exitChan:
 			ex.Code = exitCode
-			ex.Type = exitTypeNormal
+			ex.Type = ExitTypeNormal
 		case <-time.After(time.Duration(tio.Duration) * time.Second):
 			cmd.Process.Signal(tio.signal())
 			ex.Code = exitTimedOut
-			ex.Type = exitTypeTimedOut
+			ex.Type = ExitTypeTimedOut
 		}
 	} else {
 		exitCode := <-exitChan
-		return exit{
+		return ExitStatus{
 			Code: exitCode,
-			Type: exitTypeNormal,
+			Type: ExitTypeNormal,
 		}
 	}
 
@@ -188,7 +187,7 @@ func (tio *Timeout) handleTimeout() exit {
 			case <-time.After(time.Duration(tio.KillAfter) * time.Second):
 				cmd.Process.Kill()
 				ex.Code = exitKilled
-				ex.Type = exitTypeKilled
+				ex.Type = ExitTypeKilled
 			}
 		} else {
 			tmpExit = <-exitChan
