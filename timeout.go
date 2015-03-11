@@ -54,6 +54,10 @@ type exitState struct {
 	ExitType exitType
 }
 
+func (exSt exitState) String() string {
+	return fmt.Sprintf("exitCode: %d, type: %s", exSt.ExitCode, exSt.ExitType)
+}
+
 type exitType int
 
 const (
