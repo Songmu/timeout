@@ -28,20 +28,18 @@ var defaultSignal = func() os.Signal {
 	return syscall.SIGTERM
 }()
 
-type exitCode int
-
 // exit statuses are same with GNU timeout
 const (
-	exitNormal            exitCode = 0
-	exitTimedOut                   = 124
-	exitUnknownErr                 = 125
-	exitCommandNotInvoked          = 126
-	exitCommandNotFound            = 127
-	exitKilled                     = 137
+	exitNormal            = 0
+	exitTimedOut          = 124
+	exitUnknownErr        = 125
+	exitCommandNotInvoked = 126
+	exitCommandNotFound   = 127
+	exitKilled            = 137
 )
 
 type tmError struct {
-	ExitCode exitCode
+	ExitCode int
 	message  string
 }
 
@@ -50,7 +48,7 @@ func (err *tmError) Error() string {
 }
 
 type exit struct {
-	Code exitCode
+	Code int
 	Type exitType
 }
 
@@ -203,8 +201,8 @@ func (tio *Timeout) handleTimeout() exit {
 	return ex
 }
 
-func getExitChan(cmd *exec.Cmd) chan exitCode {
-	ch := make(chan exitCode)
+func getExitChan(cmd *exec.Cmd) chan int {
+	ch := make(chan int)
 	go func() {
 		err := cmd.Wait()
 		ch <- resolveCode(err)
@@ -212,15 +210,15 @@ func getExitChan(cmd *exec.Cmd) chan exitCode {
 	return ch
 }
 
-func resolveCode(err error) exitCode {
+func resolveCode(err error) int {
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-				return exitCode(status.ExitStatus())
+				return status.ExitStatus()
 			}
 		}
 		// XXX The exit codes in some platforms aren't integer. e.g. plan9.
-		return exitCode(-1)
+		return -1
 	}
 	return exitNormal
 }
