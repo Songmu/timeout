@@ -38,12 +38,12 @@ const (
 	exitKilled            = 137
 )
 
-type tmError struct {
+type Error struct {
 	ExitCode int
 	message  string
 }
 
-func (err *tmError) Error() string {
+func (err *Error) Error() string {
 	return err.message
 }
 
@@ -110,12 +110,12 @@ func (tio *Timeout) Run() int {
 	return int(exitSt.Code)
 }
 
-func (tio *Timeout) RunCommand() (exitChan chan ExitStatus, stdoutPipe, stderrPipe io.ReadCloser, tmerr *tmError) {
+func (tio *Timeout) RunCommand() (exitChan chan ExitStatus, stdoutPipe, stderrPipe io.ReadCloser, tmerr *Error) {
 	cmd := tio.Cmd
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		tmerr = &tmError{
+		tmerr = &Error{
 			ExitCode: exitUnknownErr,
 			message:  fmt.Sprintf("unknown error: %s", err),
 		}
@@ -123,7 +123,7 @@ func (tio *Timeout) RunCommand() (exitChan chan ExitStatus, stdoutPipe, stderrPi
 	}
 	stderrPipe, err = cmd.StderrPipe()
 	if err != nil {
-		tmerr = &tmError{
+		tmerr = &Error{
 			ExitCode: exitUnknownErr,
 			message:  fmt.Sprintf("unknown error: %s", err),
 		}
@@ -132,17 +132,17 @@ func (tio *Timeout) RunCommand() (exitChan chan ExitStatus, stdoutPipe, stderrPi
 	if err = cmd.Start(); err != nil {
 		switch {
 		case os.IsNotExist(err):
-			tmerr = &tmError{
+			tmerr = &Error{
 				ExitCode: exitCommandNotFound,
 				message:  err.Error(),
 			}
 		case os.IsPermission(err):
-			tmerr = &tmError{
+			tmerr = &Error{
 				ExitCode: exitCommandNotInvoked,
 				message:  err.Error(),
 			}
 		default:
-			tmerr = &tmError{
+			tmerr = &Error{
 				ExitCode: exitUnknownErr,
 				message:  fmt.Sprintf("unknown error: %s", err),
 			}
