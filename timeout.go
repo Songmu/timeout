@@ -58,9 +58,6 @@ func (tio *Timeout) Run() int {
 
 func (tio *Timeout) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.ReadCloser, err error) {
 	cmd := tio.Cmd
-	if err != nil {
-		return
-	}
 
 	stdoutPipe, err = cmd.StdoutPipe()
 	if err != nil {
@@ -76,14 +73,15 @@ func (tio *Timeout) RunCommand() (exitChan chan int, stdoutPipe, stderrPipe io.R
 
 	exitChan = make(chan int)
 	go func() {
-		exitChan <- tio.handleTimeout(cmd)
+		exitChan <- tio.handleTimeout()
 	}()
 
 	return
 }
 
-func (tio *Timeout) handleTimeout(cmd *exec.Cmd) int {
+func (tio *Timeout) handleTimeout() int {
 	exit := 0
+	cmd := tio.Cmd
 	timedOut := false
 	exitChan := getExitChan(cmd)
 
@@ -124,20 +122,22 @@ func (tio *Timeout) handleTimeout(cmd *exec.Cmd) int {
 func getExitChan(cmd *exec.Cmd) chan int {
 	ch := make(chan int)
 	go func() {
-		exit := 0
 		err := cmd.Wait()
-		if err != nil {
-			if exiterr, ok := err.(*exec.ExitError); ok {
-				if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-					exit = status.ExitStatus()
-				}
-			} else {
-				exit = -1
-			}
-		}
-		ch <- exit
+		ch <- resolveExitCode(err)
 	}()
 	return ch
+}
+
+func resolveExitCode(err error) int {
+	if err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				return status.ExitStatus()
+			}
+		}
+		return -1 // XXX
+	}
+	return 0
 }
 
 func readAndOut(r io.Reader, f *os.File) {
