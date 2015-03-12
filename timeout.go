@@ -230,7 +230,7 @@ func readAndOut(r io.Reader, f *os.File) {
 	}
 }
 
-var durRe = regexp.MustCompile(`^([0-9]+)([smhd])?$`)
+var durRe = regexp.MustCompile(`^([-0-9e.]+)([smhd])?$`)
 
 func ParseDuration(durStr string) (float64, error) {
 	matches := durRe.FindStringSubmatch(durStr)
@@ -238,7 +238,10 @@ func ParseDuration(durStr string) (float64, error) {
 		return 0, fmt.Errorf("duration format invalid: %s", durStr)
 	}
 
-	base, _ := strconv.ParseFloat(matches[1], 64)
+	base, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid time interval `%s`", durStr)
+	}
 	switch matches[2] {
 	case "", "s":
 		return base, nil
