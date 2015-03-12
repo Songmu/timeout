@@ -16,8 +16,8 @@ import (
 
 type Timeout struct {
 	PreserveStatus bool
-	Duration       uint64
-	KillAfter      uint64
+	Duration       float64
+	KillAfter      float64
 	Signal         os.Signal
 	Cmd            *exec.Cmd
 }
@@ -232,13 +232,13 @@ func readAndOut(r io.Reader, f *os.File) {
 
 var durRe = regexp.MustCompile(`^([0-9]+)([smhd])?$`)
 
-func ParseDuration(durStr string) (uint64, error) {
+func ParseDuration(durStr string) (float64, error) {
 	matches := durRe.FindStringSubmatch(durStr)
 	if len(matches) == 0 {
 		return 0, fmt.Errorf("duration format invalid: %s", durStr)
 	}
 
-	base, _ := strconv.ParseUint(matches[1], 10, 64)
+	base, _ := strconv.ParseFloat(matches[1], 64)
 	switch matches[2] {
 	case "", "s":
 		return base, nil

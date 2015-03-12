@@ -23,7 +23,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	killAfter := uint64(0)
+	killAfter := float64(0)
 	if *optKillAfter != "" {
 		killAfter, _ = timeout.ParseDuration(*optKillAfter)
 	}
