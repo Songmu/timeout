@@ -272,6 +272,10 @@ func ParseSignal(sigStr string) (os.Signal, error) {
 		return syscall.SIGALRM, nil
 	case "TERM", "15":
 		return syscall.SIGTERM, nil
+	case "USR1":
+		return syscall.SIGUSR1, nil
+	case "USR2":
+		return syscall.SIGUSR2, nil
 	default:
 		return nil, fmt.Errorf("%s: invalid signal", sigStr)
 	}
