@@ -162,22 +162,15 @@ func (tio *Timeout) RunCommand() (exitChan chan ExitStatus, stdoutPipe, stderrPi
 func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 	cmd := tio.Cmd
 	exitChan := getExitChan(cmd)
-	if tio.Duration > 0 {
-		select {
-		case exitCode := <-exitChan:
-			ex.Code = exitCode
-			ex.Type = ExitTypeNormal
-		case <-time.After(time.Duration(tio.Duration) * time.Second):
-			cmd.Process.Signal(tio.signal()) // XXX error handling
-			ex.Code = exitTimedOut
-			ex.Type = ExitTypeTimedOut
-		}
-	} else {
-		exitCode := <-exitChan
-		return ExitStatus{
-			Code: exitCode,
-			Type: ExitTypeNormal,
-		}
+	select {
+	case exitCode := <-exitChan:
+		ex.Code = exitCode
+		ex.Type = ExitTypeNormal
+		return
+	case <-time.After(time.Duration(tio.Duration) * time.Second):
+		cmd.Process.Signal(tio.signal()) // XXX error handling
+		ex.Code = exitTimedOut
+		ex.Type = ExitTypeTimedOut
 	}
 
 	if ex.isTimedOut() {
