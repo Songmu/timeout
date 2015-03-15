@@ -2,6 +2,7 @@ package timeout
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -89,6 +90,21 @@ func (tio *Timeout) signal() os.Signal {
 		return defaultSignal
 	}
 	return tio.Signal
+}
+
+func (tio *Timeout) Run() (ExitStatus, string, string, *Error) {
+	cmd := tio.Cmd
+	var outBuffer, errBuffer bytes.Buffer
+	cmd.Stdout = &outBuffer
+	cmd.Stderr = &errBuffer
+
+	ch, tmerr := tio.RunCommand()
+	if tmerr != nil {
+		fmt.Fprintln(os.Stderr, tmerr)
+		return ExitStatus{}, string(outBuffer.Bytes()), string(errBuffer.Bytes()), tmerr
+	}
+	exitSt := <-ch
+	return exitSt, string(outBuffer.Bytes()), string(errBuffer.Bytes()), nil
 }
 
 func (tio *Timeout) RunSimple() int {

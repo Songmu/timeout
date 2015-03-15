@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestRun(t *testing.T) {
+func TestRunSimple(t *testing.T) {
 	tio := &Timeout{
 		Duration: 0.1,
 		Cmd:      exec.Command("/bin/sh", "-c", "echo 1"),
@@ -15,6 +15,26 @@ func TestRun(t *testing.T) {
 	exit := tio.RunSimple()
 
 	if exit != 0 {
+		t.Errorf("something wrong")
+	}
+}
+
+func TestRun(t *testing.T) {
+	tio := &Timeout{
+		Duration: 10,
+		Cmd:      exec.Command("/bin/sh", "-c", "echo 1"),
+	}
+	_, stdout, stderr, err := tio.Run()
+
+	if stdout != "1\n" {
+		t.Errorf("something wrong")
+	}
+
+	if stderr != "" {
+		t.Errorf("something wrong")
+	}
+
+	if err != nil {
 		t.Errorf("something wrong")
 	}
 }
