@@ -1,3 +1,4 @@
+// Package timeout is for handling timeout invocation of external command
 package timeout
 
 import (
@@ -13,6 +14,7 @@ import (
 	"time"
 )
 
+// Timeout is main struct of timeout package
 type Timeout struct {
 	PreserveStatus bool
 	Duration       float64
@@ -38,6 +40,7 @@ const (
 	exitKilled            = 137
 )
 
+// Error is error of timeout
 type Error struct {
 	ExitCode int
 	message  string
@@ -47,6 +50,7 @@ func (err *Error) Error() string {
 	return fmt.Sprintf("exit code: %d, %s", err.ExitCode, err.message)
 }
 
+// ExitStatus stores exit informations of the command
 type ExitStatus struct {
 	Code int
 	Type exitType
@@ -56,16 +60,19 @@ func (ex *ExitStatus) String() string {
 	return fmt.Sprintf("exitCode: %d, type: %s", ex.Code, ex.Type)
 }
 
+// IsTimedOut returns the command timed out or not
 func (ex *ExitStatus) IsTimedOut() bool {
 	return ex.Type == ExitTypeTimedOut || ex.Type == ExitTypeKilled
 }
 
+// IsKilled returns the command is killed or not
 func (ex *ExitStatus) IsKilled() bool {
 	return ex.Type == ExitTypeKilled
 }
 
 type exitType int
 
+// exit types
 const (
 	ExitTypeNormal exitType = iota + 1
 	ExitTypeTimedOut
@@ -92,6 +99,7 @@ func (tio *Timeout) signal() os.Signal {
 	return tio.Signal
 }
 
+// Run is synchronous interface of exucuting command and returning informations
 func (tio *Timeout) Run() (*ExitStatus, string, string, *Error) {
 	cmd := tio.Cmd
 	var outBuffer, errBuffer bytes.Buffer
@@ -107,6 +115,7 @@ func (tio *Timeout) Run() (*ExitStatus, string, string, *Error) {
 	return exitSt, string(outBuffer.Bytes()), string(errBuffer.Bytes()), nil
 }
 
+// RunSimple execute command and only returns integer. It is mainly for go-timeout command
 func (tio *Timeout) RunSimple() int {
 	cmd := tio.Cmd
 
@@ -138,6 +147,7 @@ func (tio *Timeout) RunSimple() int {
 	return exitSt.Code
 }
 
+// RunCommand is executing the command and handling timeout
 func (tio *Timeout) RunCommand() (chan *ExitStatus, *Error) {
 	cmd := tio.Cmd
 
