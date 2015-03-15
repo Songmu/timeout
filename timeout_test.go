@@ -9,7 +9,7 @@ import (
 
 func TestRun(t *testing.T) {
 	tio := &Timeout{
-		Duration: 10,
+		Duration: 0.1,
 		Cmd:      exec.Command("/bin/sh", "-c", "echo 1"),
 	}
 	exit := tio.Run()

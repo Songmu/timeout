@@ -165,7 +165,7 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 		ex.Code = exitCode
 		ex.Type = ExitTypeNormal
 		return
-	case <-time.After(time.Duration(tio.Duration) * time.Second):
+	case <-time.After(time.Duration(tio.Duration * float64(time.Second))):
 		cmd.Process.Signal(tio.signal()) // XXX error handling
 		ex.Code = exitTimedOut
 		ex.Type = ExitTypeTimedOut
@@ -176,7 +176,7 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 		if tio.KillAfter > 0 {
 			select {
 			case tmpExit = <-exitChan:
-			case <-time.After(time.Duration(tio.KillAfter) * time.Second):
+			case <-time.After(time.Duration(tio.KillAfter * float64(time.Second))):
 				cmd.Process.Kill()
 				ex.Code = exitKilled
 				ex.Type = ExitTypeKilled
