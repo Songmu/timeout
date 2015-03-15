@@ -6,10 +6,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"regexp"
 	"runtime"
-	"strconv"
-	"strings"
+
 	"syscall"
 	"time"
 )
@@ -220,56 +218,5 @@ func readAndOut(r io.Reader, f *os.File) {
 	s := bufio.NewScanner(r)
 	for s.Scan() {
 		fmt.Fprintln(f, s.Text())
-	}
-}
-
-var durRe = regexp.MustCompile(`^([-0-9e.]+)([smhd])?$`)
-
-func ParseDuration(durStr string) (float64, error) {
-	matches := durRe.FindStringSubmatch(durStr)
-	if len(matches) == 0 {
-		return 0, fmt.Errorf("duration format invalid: %s", durStr)
-	}
-
-	base, err := strconv.ParseFloat(matches[1], 64)
-	if err != nil {
-		return 0, fmt.Errorf("invalid time interval `%s`", durStr)
-	}
-	switch matches[2] {
-	case "", "s":
-		return base, nil
-	case "m":
-		return base * 60, nil
-	case "h":
-		return base * 60 * 60, nil
-	case "d":
-		return base * 60 * 60 * 24, nil
-	default:
-		return 0, fmt.Errorf("invalid time interval `%s`", durStr)
-	}
-}
-
-func ParseSignal(sigStr string) (os.Signal, error) {
-	switch strings.ToUpper(sigStr) {
-	case "":
-		return defaultSignal, nil
-	case "HUP", "1":
-		return syscall.SIGHUP, nil
-	case "INT", "2":
-		return os.Interrupt, nil
-	case "QUIT", "3":
-		return syscall.SIGQUIT, nil
-	case "KILL", "9":
-		return os.Kill, nil
-	case "ALRM", "14":
-		return syscall.SIGALRM, nil
-	case "TERM", "15":
-		return syscall.SIGTERM, nil
-	case "USR1":
-		return syscall.SIGUSR1, nil
-	case "USR2":
-		return syscall.SIGUSR2, nil
-	default:
-		return nil, fmt.Errorf("%s: invalid signal", sigStr)
 	}
 }

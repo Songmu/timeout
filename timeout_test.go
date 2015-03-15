@@ -9,7 +9,8 @@ import (
 
 func TestRun(t *testing.T) {
 	tio := &Timeout{
-		Cmd: exec.Command("/bin/sh", "-c", "echo 1"),
+		Duration: 10,
+		Cmd:      exec.Command("/bin/sh", "-c", "echo 1"),
 	}
 	exit := tio.Run()
 
@@ -79,53 +80,6 @@ func TestCommandNotFound(t *testing.T) {
 	exit := tio.Run()
 
 	if exit != 127 {
-		t.Errorf("something wrong")
-	}
-}
-
-func TestParseDuration(t *testing.T) {
-	v, err := ParseDuration("55s")
-	if err != nil {
-		t.Errorf("something wrong")
-	}
-	if v != 55 {
-		t.Errorf("parse failed!")
-	}
-
-	v, err = ParseDuration("55")
-	if err != nil {
-		t.Errorf("something wrong")
-	}
-	if v != 55 {
-		t.Errorf("parse failed!")
-	}
-
-	v, err = ParseDuration("10m")
-	if err != nil {
-		t.Errorf("something wrong")
-	}
-	if v != 600 {
-		t.Errorf("parse failed!")
-	}
-
-	v, err = ParseDuration("1h")
-	if err != nil {
-		t.Errorf("something wrong")
-	}
-	if v != 3600 {
-		t.Errorf("parse failed!")
-	}
-
-	v, err = ParseDuration("1d")
-	if err != nil {
-		t.Errorf("something wrong")
-	}
-	if v != 86400 {
-		t.Errorf("parse failed!")
-	}
-
-	_, err = ParseDuration("1w")
-	if err == nil {
 		t.Errorf("something wrong")
 	}
 }
