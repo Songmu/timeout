@@ -62,7 +62,7 @@ func main() {
 		PreserveStatus: *p,
 		Signal:         sig,
 	}
-	exit := tio.Run()
+	exit := tio.RunSimple()
 	os.Exit(exit)
 }
 

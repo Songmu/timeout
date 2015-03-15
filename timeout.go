@@ -91,7 +91,7 @@ func (tio *Timeout) signal() os.Signal {
 	return tio.Signal
 }
 
-func (tio *Timeout) Run() int {
+func (tio *Timeout) RunSimple() int {
 	ch, stdoutPipe, stderrPipe, err := tio.RunCommand()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

@@ -12,7 +12,7 @@ func TestRun(t *testing.T) {
 		Duration: 0.1,
 		Cmd:      exec.Command("/bin/sh", "-c", "echo 1"),
 	}
-	exit := tio.Run()
+	exit := tio.RunSimple()
 
 	if exit != 0 {
 		t.Errorf("something wrong")
@@ -25,7 +25,7 @@ func TestRunTimeout(t *testing.T) {
 		Duration: 1,
 		Signal:   os.Interrupt,
 	}
-	exit := tio.Run()
+	exit := tio.RunSimple()
 
 	if exit != 124 {
 		t.Errorf("something wrong")
@@ -39,7 +39,7 @@ func TestPreserveStatus(t *testing.T) {
 		PreserveStatus: true,
 	}
 
-	exit := tio.Run()
+	exit := tio.RunSimple()
 	if exit != 23 {
 		t.Errorf("something wrong")
 	}
@@ -53,7 +53,7 @@ func TestKillAfter(t *testing.T) {
 		KillAfter:      1,
 		PreserveStatus: true,
 	}
-	exit := tio.Run()
+	exit := tio.RunSimple()
 
 	if exit != 137 {
 		t.Errorf("something wrong")
@@ -65,7 +65,7 @@ func TestCommandCannotBeInvoked(t *testing.T) {
 		Cmd:      exec.Command("test/dummy"),
 		Duration: 1,
 	}
-	exit := tio.Run()
+	exit := tio.RunSimple()
 
 	if exit != 126 {
 		t.Errorf("something wrong")
@@ -77,7 +77,7 @@ func TestCommandNotFound(t *testing.T) {
 		Cmd:      exec.Command("test/ignore_sigterm.pl-xxxxxxxxxxxxxxxxxxxxx"),
 		Duration: 1,
 	}
-	exit := tio.Run()
+	exit := tio.RunSimple()
 
 	if exit != 127 {
 		t.Errorf("something wrong")
