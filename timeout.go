@@ -92,10 +92,23 @@ func (tio *Timeout) signal() os.Signal {
 }
 
 func (tio *Timeout) RunSimple() int {
-	ch, stdoutPipe, stderrPipe, err := tio.RunCommand()
+	cmd := tio.Cmd
+
+	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		return int(err.ExitCode)
+		return exitUnknownErr
+	}
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return exitUnknownErr
+	}
+
+	ch, tmerr := tio.RunCommand()
+	if tmerr != nil {
+		fmt.Fprintln(os.Stderr, tmerr)
+		return tmerr.ExitCode
 	}
 	defer func() {
 		stdoutPipe.Close()
@@ -109,52 +122,35 @@ func (tio *Timeout) RunSimple() int {
 	return exitSt.Code
 }
 
-func (tio *Timeout) RunCommand() (exitChan chan ExitStatus, stdoutPipe, stderrPipe io.ReadCloser, tmerr *Error) {
+func (tio *Timeout) RunCommand() (chan ExitStatus, *Error) {
 	cmd := tio.Cmd
 
-	stdoutPipe, err := cmd.StdoutPipe()
-	if err != nil {
-		tmerr = &Error{
-			ExitCode: exitUnknownErr,
-			message:  fmt.Sprintf("unknown error: %s", err),
-		}
-		return
-	}
-	stderrPipe, err = cmd.StderrPipe()
-	if err != nil {
-		tmerr = &Error{
-			ExitCode: exitUnknownErr,
-			message:  fmt.Sprintf("unknown error: %s", err),
-		}
-		return
-	}
-	if err = cmd.Start(); err != nil {
+	if err := cmd.Start(); err != nil {
 		switch {
 		case os.IsNotExist(err):
-			tmerr = &Error{
+			return nil, &Error{
 				ExitCode: exitCommandNotFound,
 				message:  err.Error(),
 			}
 		case os.IsPermission(err):
-			tmerr = &Error{
+			return nil, &Error{
 				ExitCode: exitCommandNotInvoked,
 				message:  err.Error(),
 			}
 		default:
-			tmerr = &Error{
+			return nil, &Error{
 				ExitCode: exitUnknownErr,
 				message:  fmt.Sprintf("unknown error: %s", err),
 			}
 		}
-		return
 	}
 
-	exitChan = make(chan ExitStatus)
+	exitChan := make(chan ExitStatus)
 	go func() {
 		exitChan <- tio.handleTimeout()
 	}()
 
-	return
+	return exitChan, nil
 }
 
 func (tio *Timeout) handleTimeout() (ex ExitStatus) {
