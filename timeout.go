@@ -106,7 +106,7 @@ func (tio *Timeout) Run() int {
 	go readAndOut(stderrPipe, os.Stderr)
 
 	exitSt := <-ch
-	return int(exitSt.Code)
+	return exitSt.Code
 }
 
 func (tio *Timeout) RunCommand() (exitChan chan ExitStatus, stdoutPipe, stderrPipe io.ReadCloser, tmerr *Error) {
