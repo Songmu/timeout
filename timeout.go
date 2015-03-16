@@ -2,7 +2,6 @@
 package timeout
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -137,13 +136,16 @@ func (tio *Timeout) RunSimple() int {
 		fmt.Fprintln(os.Stderr, err)
 		return getExitCodeFromErr(err)
 	}
-	defer func() {
-		stdoutPipe.Close()
-		stderrPipe.Close()
+
+	go func() {
+		defer stdoutPipe.Close()
+		io.Copy(os.Stdout, stdoutPipe)
 	}()
 
-	go readAndOut(stdoutPipe, os.Stdout)
-	go readAndOut(stderrPipe, os.Stderr)
+	go func() {
+		defer stderrPipe.Close()
+		io.Copy(os.Stderr, stderrPipe)
+	}()
 
 	exitSt := <-ch
 	return exitSt.Code
@@ -244,11 +246,4 @@ func resolveCode(err error) int {
 		return -1
 	}
 	return exitNormal
-}
-
-func readAndOut(r io.Reader, f *os.File) {
-	s := bufio.NewScanner(r)
-	for s.Scan() {
-		fmt.Fprintln(f, s.Text())
-	}
 }
