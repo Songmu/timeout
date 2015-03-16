@@ -64,7 +64,7 @@ func (ex ExitStatus) String() string {
 
 // IsTimedOut returns the command timed out or not
 func (ex ExitStatus) IsTimedOut() bool {
-	return ex.Type == ExitTypeTimedOut
+	return ex.Type == ExitTypeTimedOut || ex.Type == ExitTypeTimedOut
 }
 
 // IsKilled returns the command is killed or not
