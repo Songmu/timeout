@@ -62,10 +62,12 @@ func (ex ExitStatus) String() string {
 	return fmt.Sprintf("exitCode: %d, type: %s", ex.Code, ex.Type)
 }
 
+// IsTimedOut returns the command timed out or not
 func (ex ExitStatus) IsTimedOut() bool {
 	return ex.Type == ExitTypeTimedOut
 }
 
+// IsKilled returns the command is killed or not
 func (ex ExitStatus) IsKilled() bool {
 	return ex.Type == ExitTypeKilled
 }
