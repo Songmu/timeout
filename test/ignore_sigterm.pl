@@ -4,4 +4,4 @@ use warnings;
 use utf8;
 
 $SIG{TERM} = 'IGNORE';
-sleep 10;
+sleep 3;

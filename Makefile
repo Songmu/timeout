@@ -24,6 +24,7 @@ lint: deps
 	test ! -s $(LINT_RET)
 
 cover: deps
-	tool/cover.sh
+	go get github.com/axw/gocov/gocov
+	goveralls
 
 .PHONY: test deps lint cover

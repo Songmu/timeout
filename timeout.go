@@ -58,10 +58,6 @@ type ExitStatus struct {
 	typ  exitType
 }
 
-func (ex ExitStatus) String() string {
-	return fmt.Sprintf("exitCode: %d, type: %s", ex.Code, ex.typ)
-}
-
 // IsTimedOut returns the command timed out or not
 func (ex ExitStatus) IsTimedOut() bool {
 	return ex.typ == exitTypeTimedOut || ex.typ == exitTypeTimedOut
@@ -94,19 +90,6 @@ const (
 	exitTypeTimedOut
 	exitTypeKilled
 )
-
-func (eTyp exitType) String() string {
-	switch eTyp {
-	case exitTypeNormal:
-		return "normal"
-	case exitTypeTimedOut:
-		return "timeout"
-	case exitTypeKilled:
-		return "killed"
-	default:
-		return "unknown"
-	}
-}
 
 func (tio *Timeout) signal() os.Signal {
 	if tio.Signal == nil {

@@ -79,6 +79,20 @@ func TestKillAfter(t *testing.T) {
 	}
 }
 
+func TestKillAfterNotKilled(t *testing.T) {
+	tio := &Timeout{
+		Cmd:       exec.Command("perl", "test/ignore_sigterm.pl"),
+		Signal:    syscall.SIGTERM,
+		Duration:  1 * time.Second,
+		KillAfter: 5 * time.Second,
+	}
+	exit := tio.RunSimple(true)
+
+	if exit != 0 {
+		t.Errorf("something wrong")
+	}
+}
+
 func TestCommandCannotBeInvoked(t *testing.T) {
 	tio := &Timeout{
 		Cmd:      exec.Command("test/dummy"),

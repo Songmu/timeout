@@ -3,6 +3,6 @@ go:
 - 1.4
 script:
 - make lint
-- make cover
+- make test
 after_script:
-- goveralls -coverprofile=.profile.cov
+- make cover
