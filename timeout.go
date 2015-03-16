@@ -47,11 +47,11 @@ const (
 // Error is error of timeout
 type Error struct {
 	ExitCode int
-	message  string
+	Err      error
 }
 
 func (err *Error) Error() string {
-	return err.message
+	return fmt.Sprintf("exit code: %d, %s", err.ExitCode, err.Err.Error())
 }
 
 // ExitStatus stores exit informations of the command
@@ -158,17 +158,17 @@ func (tio *Timeout) RunCommand() (chan ExitStatus, *Error) {
 		case os.IsNotExist(err):
 			return nil, &Error{
 				ExitCode: exitCommandNotFound,
-				message:  err.Error(),
+				Err:      err,
 			}
 		case os.IsPermission(err):
 			return nil, &Error{
 				ExitCode: exitCommandNotInvoked,
-				message:  err.Error(),
+				Err:      err,
 			}
 		default:
 			return nil, &Error{
 				ExitCode: exitUnknownErr,
-				message:  fmt.Sprintf("unknown error: %s", err),
+				Err:      err,
 			}
 		}
 	}
