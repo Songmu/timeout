@@ -60,7 +60,7 @@ type ExitStatus struct {
 
 // IsTimedOut returns the command timed out or not
 func (ex ExitStatus) IsTimedOut() bool {
-	return ex.typ == exitTypeTimedOut || ex.typ == exitTypeTimedOut
+	return ex.typ == exitTypeTimedOut || ex.typ == exitTypeKilled
 }
 
 // IsKilled returns the command is killed or not
