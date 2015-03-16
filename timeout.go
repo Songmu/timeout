@@ -15,11 +15,10 @@ import (
 
 // Timeout is main struct of timeout package
 type Timeout struct {
-	PreserveStatus bool
-	Duration       time.Duration
-	KillAfter      time.Duration
-	Signal         os.Signal
-	Cmd            *exec.Cmd
+	Duration  time.Duration
+	KillAfter time.Duration
+	Signal    os.Signal
+	Cmd       *exec.Cmd
 }
 
 var defaultSignal os.Signal
@@ -71,6 +70,19 @@ func (ex ExitStatus) IsKilled() bool {
 	return ex.Type == ExitTypeKilled
 }
 
+func (ex ExitStatus) GetExitCode(preserveStatus bool) int {
+	switch {
+	case ex.IsKilled():
+		return exitKilled
+	case preserveStatus:
+		return ex.Code
+	case ex.IsTimedOut():
+		return exitTimedOut
+	default:
+		return ex.Code
+	}
+}
+
 type exitType int
 
 // exit types
@@ -117,7 +129,7 @@ func (tio *Timeout) Run() (ExitStatus, string, string, error) {
 }
 
 // RunSimple execute command and only returns integer as exit code. It is mainly for go-timeout command
-func (tio *Timeout) RunSimple() int {
+func (tio *Timeout) RunSimple(preserveStatus bool) int {
 	cmd := tio.Cmd
 
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -148,7 +160,7 @@ func (tio *Timeout) RunSimple() int {
 	}()
 
 	exitSt := <-ch
-	return exitSt.Code
+	return exitSt.GetExitCode(preserveStatus)
 }
 
 func getExitCodeFromErr(err error) int {
@@ -203,24 +215,19 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 		return ex
 	case <-time.After(tio.Duration):
 		cmd.Process.Signal(tio.signal()) // XXX error handling
-		ex.Code = exitTimedOut
 		ex.Type = ExitTypeTimedOut
 	}
 
-	tmpExit := exitNormal
 	if tio.KillAfter > 0 {
 		select {
-		case tmpExit = <-exitChan:
+		case ex.Code = <-exitChan:
 		case <-time.After(tio.KillAfter):
 			cmd.Process.Kill()
 			ex.Code = exitKilled
 			ex.Type = ExitTypeKilled
 		}
 	} else {
-		tmpExit = <-exitChan
-	}
-	if tio.PreserveStatus && !ex.IsKilled() {
-		ex.Code = tmpExit
+		ex.Code = <-exitChan
 	}
 
 	return ex

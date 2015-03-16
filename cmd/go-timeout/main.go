@@ -57,13 +57,12 @@ func main() {
 	cmd := exec.Command(rest[1], rest[2:]...)
 
 	tio := &timeout.Timeout{
-		Duration:       time.Duration(dur * float64(time.Second)),
-		Cmd:            cmd,
-		KillAfter:      time.Duration(killAfter * float64(time.Second)),
-		PreserveStatus: *p,
-		Signal:         sig,
+		Duration:  time.Duration(dur * float64(time.Second)),
+		Cmd:       cmd,
+		KillAfter: time.Duration(killAfter * float64(time.Second)),
+		Signal:    sig,
 	}
-	exit := tio.RunSimple()
+	exit := tio.RunSimple(*p)
 	os.Exit(exit)
 }
 
