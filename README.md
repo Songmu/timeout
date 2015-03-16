@@ -9,8 +9,6 @@ timeout
 [coveralls]: https://coveralls.io/r/Songmu/timeout?branch=master
 [license]: https://github.com/Songmu/timeout/blob/master/LICENSE
 
-# NAME
-
 Timeout invocation.
 
 ## Description
