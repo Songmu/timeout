@@ -102,16 +102,16 @@ func (tio *Timeout) signal() os.Signal {
 }
 
 // Run is synchronous interface of exucuting command and returning informations
-func (tio *Timeout) Run() (ExitStatus, string, string, *Error) {
+func (tio *Timeout) Run() (ExitStatus, string, string, error) {
 	cmd := tio.Cmd
 	var outBuffer, errBuffer bytes.Buffer
 	cmd.Stdout = &outBuffer
 	cmd.Stderr = &errBuffer
 
-	ch, tmerr := tio.RunCommand()
-	if tmerr != nil {
-		fmt.Fprintln(os.Stderr, tmerr)
-		return ExitStatus{}, string(outBuffer.Bytes()), string(errBuffer.Bytes()), tmerr
+	ch, err := tio.RunCommand()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return ExitStatus{}, string(outBuffer.Bytes()), string(errBuffer.Bytes()), err
 	}
 	exitSt := <-ch
 	return exitSt, string(outBuffer.Bytes()), string(errBuffer.Bytes()), nil
@@ -132,10 +132,10 @@ func (tio *Timeout) RunSimple() int {
 		return exitUnknownErr
 	}
 
-	ch, tmerr := tio.RunCommand()
-	if tmerr != nil {
-		fmt.Fprintln(os.Stderr, tmerr)
-		return tmerr.ExitCode
+	ch, err := tio.RunCommand()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return getExitCodeFromErr(err)
 	}
 	defer func() {
 		stdoutPipe.Close()
@@ -149,8 +149,18 @@ func (tio *Timeout) RunSimple() int {
 	return exitSt.Code
 }
 
+func getExitCodeFromErr(err error) int {
+	if err != nil {
+		if tmerr, ok := err.(*Error); ok {
+			return tmerr.ExitCode
+		}
+		return -1
+	}
+	return exitNormal
+}
+
 // RunCommand is executing the command and handling timeout. This is primitive interface of Timeout
-func (tio *Timeout) RunCommand() (chan ExitStatus, *Error) {
+func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
 	cmd := tio.Cmd
 
 	if err := cmd.Start(); err != nil {
