@@ -47,7 +47,7 @@ type Error struct {
 }
 
 func (err *Error) Error() string {
-	return fmt.Sprintf("exit code: %d, %s", err.ExitCode, err.message)
+	return err.message
 }
 
 // ExitStatus stores exit informations of the command
@@ -56,17 +56,15 @@ type ExitStatus struct {
 	Type exitType
 }
 
-func (ex *ExitStatus) String() string {
+func (ex ExitStatus) String() string {
 	return fmt.Sprintf("exitCode: %d, type: %s", ex.Code, ex.Type)
 }
 
-// IsTimedOut returns the command timed out or not
-func (ex *ExitStatus) IsTimedOut() bool {
-	return ex.Type == ExitTypeTimedOut || ex.Type == ExitTypeKilled
+func (ex ExitStatus) IsTimedOut() bool {
+	return ex.Type == ExitTypeTimedOut
 }
 
-// IsKilled returns the command is killed or not
-func (ex *ExitStatus) IsKilled() bool {
+func (ex ExitStatus) IsKilled() bool {
 	return ex.Type == ExitTypeKilled
 }
 
@@ -100,7 +98,7 @@ func (tio *Timeout) signal() os.Signal {
 }
 
 // Run is synchronous interface of exucuting command and returning informations
-func (tio *Timeout) Run() (*ExitStatus, string, string, *Error) {
+func (tio *Timeout) Run() (ExitStatus, string, string, *Error) {
 	cmd := tio.Cmd
 	var outBuffer, errBuffer bytes.Buffer
 	cmd.Stdout = &outBuffer
@@ -109,7 +107,7 @@ func (tio *Timeout) Run() (*ExitStatus, string, string, *Error) {
 	ch, tmerr := tio.RunCommand()
 	if tmerr != nil {
 		fmt.Fprintln(os.Stderr, tmerr)
-		return nil, string(outBuffer.Bytes()), string(errBuffer.Bytes()), tmerr
+		return ExitStatus{}, string(outBuffer.Bytes()), string(errBuffer.Bytes()), tmerr
 	}
 	exitSt := <-ch
 	return exitSt, string(outBuffer.Bytes()), string(errBuffer.Bytes()), nil
@@ -148,7 +146,7 @@ func (tio *Timeout) RunSimple() int {
 }
 
 // RunCommand is executing the command and handling timeout
-func (tio *Timeout) RunCommand() (chan *ExitStatus, *Error) {
+func (tio *Timeout) RunCommand() (chan ExitStatus, *Error) {
 	cmd := tio.Cmd
 
 	if err := cmd.Start(); err != nil {
@@ -171,7 +169,7 @@ func (tio *Timeout) RunCommand() (chan *ExitStatus, *Error) {
 		}
 	}
 
-	exitChan := make(chan *ExitStatus)
+	exitChan := make(chan ExitStatus)
 	go func() {
 		exitChan <- tio.handleTimeout()
 	}()
@@ -179,8 +177,7 @@ func (tio *Timeout) RunCommand() (chan *ExitStatus, *Error) {
 	return exitChan, nil
 }
 
-func (tio *Timeout) handleTimeout() *ExitStatus {
-	ex := &ExitStatus{}
+func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 	cmd := tio.Cmd
 	exitChan := getExitChan(cmd)
 	select {
