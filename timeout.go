@@ -72,6 +72,7 @@ func (ex ExitStatus) IsKilled() bool {
 	return ex.typ == exitTypeKilled
 }
 
+// GetExitCode gets the exit code for command line tools
 func (ex ExitStatus) GetExitCode(preserveStatus bool) int {
 	switch {
 	case ex.IsKilled():
@@ -239,12 +240,12 @@ func getExitChan(cmd *exec.Cmd) chan int {
 	ch := make(chan int)
 	go func() {
 		err := cmd.Wait()
-		ch <- resolveCode(err)
+		ch <- resolveExitCode(err)
 	}()
 	return ch
 }
 
-func resolveCode(err error) int {
+func resolveExitCode(err error) int {
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
