@@ -117,7 +117,7 @@ func (tio *Timeout) Run() (ExitStatus, string, string, *Error) {
 	return exitSt, string(outBuffer.Bytes()), string(errBuffer.Bytes()), nil
 }
 
-// RunSimple execute command and only returns integer. It is mainly for go-timeout command
+// RunSimple execute command and only returns integer as exit code. It is mainly for go-timeout command
 func (tio *Timeout) RunSimple() int {
 	cmd := tio.Cmd
 
@@ -149,7 +149,7 @@ func (tio *Timeout) RunSimple() int {
 	return exitSt.Code
 }
 
-// RunCommand is executing the command and handling timeout
+// RunCommand is executing the command and handling timeout. This is primitive interface of Timeout
 func (tio *Timeout) RunCommand() (chan ExitStatus, *Error) {
 	cmd := tio.Cmd
 
