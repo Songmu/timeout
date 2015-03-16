@@ -5,11 +5,12 @@ import (
 	"os/exec"
 	"syscall"
 	"testing"
+	"time"
 )
 
 func TestRunSimple(t *testing.T) {
 	tio := &Timeout{
-		Duration: 0.1,
+		Duration: time.Duration(0.1 * float64(time.Second)),
 		Cmd:      exec.Command("/bin/sh", "-c", "echo 1"),
 	}
 	exit := tio.RunSimple()
@@ -21,7 +22,7 @@ func TestRunSimple(t *testing.T) {
 
 func TestRun(t *testing.T) {
 	tio := &Timeout{
-		Duration: 10,
+		Duration: 10 * time.Second,
 		Cmd:      exec.Command("/bin/sh", "-c", "echo 1"),
 	}
 	_, stdout, stderr, err := tio.Run()
@@ -42,7 +43,7 @@ func TestRun(t *testing.T) {
 func TestRunTimeout(t *testing.T) {
 	tio := &Timeout{
 		Cmd:      exec.Command("/bin/sh", "-c", "sleep 3"),
-		Duration: 1,
+		Duration: 1 * time.Second,
 		Signal:   os.Interrupt,
 	}
 	exit := tio.RunSimple()
@@ -55,7 +56,7 @@ func TestRunTimeout(t *testing.T) {
 func TestPreserveStatus(t *testing.T) {
 	tio := &Timeout{
 		Cmd:            exec.Command("perl", "test/exit_with_23.pl"),
-		Duration:       1,
+		Duration:       1 * time.Second,
 		PreserveStatus: true,
 	}
 
@@ -69,8 +70,8 @@ func TestKillAfter(t *testing.T) {
 	tio := &Timeout{
 		Cmd:            exec.Command("perl", "test/ignore_sigterm.pl"),
 		Signal:         syscall.SIGTERM,
-		Duration:       1,
-		KillAfter:      1,
+		Duration:       1 * time.Second,
+		KillAfter:      1 * time.Second,
 		PreserveStatus: true,
 	}
 	exit := tio.RunSimple()
@@ -83,7 +84,7 @@ func TestKillAfter(t *testing.T) {
 func TestCommandCannotBeInvoked(t *testing.T) {
 	tio := &Timeout{
 		Cmd:      exec.Command("test/dummy"),
-		Duration: 1,
+		Duration: 1 * time.Second,
 	}
 	exit := tio.RunSimple()
 
@@ -95,7 +96,7 @@ func TestCommandCannotBeInvoked(t *testing.T) {
 func TestCommandNotFound(t *testing.T) {
 	tio := &Timeout{
 		Cmd:      exec.Command("test/ignore_sigterm.pl-xxxxxxxxxxxxxxxxxxxxx"),
-		Duration: 1,
+		Duration: 1 * time.Second,
 	}
 	exit := tio.RunSimple()
 

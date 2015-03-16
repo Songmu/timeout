@@ -16,10 +16,10 @@ This software is still alpha quality. We may change APIs without notice.
 
 	tio := &Timeout{
 		Cmd:            exec.Command("perl", "-E", "say 'Hello'"),
-		Duration:       10,
-		KillAfter:      5,
+		Duration:       10 * time.Second,
+		KillAfter:      5 * time.Second,
 	}
-	exit, stdout, stderr, err := tio.Run()
+	exitStatus, stdout, stderr, err := tio.Run()
 
 ## Author
 

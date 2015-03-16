@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/Songmu/timeout"
 
@@ -56,9 +57,9 @@ func main() {
 	cmd := exec.Command(rest[1], rest[2:]...)
 
 	tio := &timeout.Timeout{
-		Duration:       dur,
+		Duration:       time.Duration(dur * float64(time.Second)),
 		Cmd:            cmd,
-		KillAfter:      killAfter,
+		KillAfter:      time.Duration(killAfter * float64(time.Second)),
 		PreserveStatus: *p,
 		Signal:         sig,
 	}
