@@ -55,21 +55,21 @@ func (err *Error) Error() string {
 // ExitStatus stores exit informations of the command
 type ExitStatus struct {
 	Code int
-	Type exitType
+	typ  exitType
 }
 
 func (ex ExitStatus) String() string {
-	return fmt.Sprintf("exitCode: %d, type: %s", ex.Code, ex.Type)
+	return fmt.Sprintf("exitCode: %d, type: %s", ex.Code, ex.typ)
 }
 
 // IsTimedOut returns the command timed out or not
 func (ex ExitStatus) IsTimedOut() bool {
-	return ex.Type == ExitTypeTimedOut || ex.Type == ExitTypeTimedOut
+	return ex.typ == exitTypeTimedOut || ex.typ == exitTypeTimedOut
 }
 
 // IsKilled returns the command is killed or not
 func (ex ExitStatus) IsKilled() bool {
-	return ex.Type == ExitTypeKilled
+	return ex.typ == exitTypeKilled
 }
 
 func (ex ExitStatus) GetExitCode(preserveStatus bool) int {
@@ -89,18 +89,18 @@ type exitType int
 
 // exit types
 const (
-	ExitTypeNormal exitType = iota + 1
-	ExitTypeTimedOut
-	ExitTypeKilled
+	exitTypeNormal exitType = iota + 1
+	exitTypeTimedOut
+	exitTypeKilled
 )
 
 func (eTyp exitType) String() string {
 	switch eTyp {
-	case ExitTypeNormal:
+	case exitTypeNormal:
 		return "normal"
-	case ExitTypeTimedOut:
+	case exitTypeTimedOut:
 		return "timeout"
-	case ExitTypeKilled:
+	case exitTypeKilled:
 		return "killed"
 	default:
 		return "unknown"
@@ -213,11 +213,11 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 	select {
 	case exitCode := <-exitChan:
 		ex.Code = exitCode
-		ex.Type = ExitTypeNormal
+		ex.typ = exitTypeNormal
 		return ex
 	case <-time.After(tio.Duration):
 		cmd.Process.Signal(tio.signal()) // XXX error handling
-		ex.Type = ExitTypeTimedOut
+		ex.typ = exitTypeTimedOut
 	}
 
 	if tio.KillAfter > 0 {
@@ -226,7 +226,7 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 		case <-time.After(tio.KillAfter):
 			cmd.Process.Kill()
 			ex.Code = exitKilled
-			ex.Type = ExitTypeKilled
+			ex.typ = exitTypeKilled
 		}
 	} else {
 		ex.Code = <-exitChan
