@@ -23,12 +23,16 @@ type Timeout struct {
 	Cmd            *exec.Cmd
 }
 
-var defaultSignal = func() os.Signal {
-	if runtime.GOOS == "windows" {
-		return os.Interrupt
+var defaultSignal os.Signal
+
+func init() {
+	switch runtime.GOOS {
+	case "windows":
+		defaultSignal = os.Interrupt
+	default:
+		defaultSignal = syscall.SIGTERM
 	}
-	return syscall.SIGTERM
-}()
+}
 
 // exit statuses are same with GNU timeout
 const (
