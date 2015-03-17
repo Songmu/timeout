@@ -69,17 +69,21 @@ func (ex ExitStatus) IsKilled() bool {
 }
 
 // GetExitCode gets the exit code for command line tools
-func (ex ExitStatus) GetExitCode(preserveStatus bool) int {
+func (ex ExitStatus) GetExitCode() int {
 	switch {
 	case ex.IsKilled():
 		return exitKilled
-	case preserveStatus:
-		return ex.Code
 	case ex.IsTimedOut():
 		return exitTimedOut
 	default:
 		return ex.Code
 	}
+}
+
+
+// GetChildExitCode gets the exit code of the Cmd itself
+func (ex ExitStatus) GetChildExitCode() int {
+	return ex.Code
 }
 
 type exitType int
@@ -146,7 +150,10 @@ func (tio *Timeout) RunSimple(preserveStatus bool) int {
 	}()
 
 	exitSt := <-ch
-	return exitSt.GetExitCode(preserveStatus)
+	if preserveStatus {
+		return exitSt.GetChildExitCode()
+	}
+	return exitSt.GetExitCode()
 }
 
 func getExitCodeFromErr(err error) int {
