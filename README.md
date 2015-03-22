@@ -22,7 +22,7 @@ This software is still alpha quality. We may change APIs without notice.
 
 ## Synopsis
 
-	tio := &Timeout{
+	tio := &timeout.Timeout{
 		Cmd:            exec.Command("perl", "-E", "say 'Hello'"),
 		Duration:       10 * time.Second,
 		KillAfter:      5 * time.Second,
