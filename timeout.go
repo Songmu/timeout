@@ -52,7 +52,7 @@ func (err *Error) Error() string {
 	return fmt.Sprintf("exit code: %d, %s", err.ExitCode, err.Err.Error())
 }
 
-// ExitStatus stores exit informations of the command
+// ExitStatus stores exit information of the command
 type ExitStatus struct {
 	Code int
 	typ  exitType
@@ -102,7 +102,7 @@ func (tio *Timeout) signal() os.Signal {
 	return tio.Signal
 }
 
-// Run is synchronous interface of exucuting command and returning informations
+// Run is synchronous interface of executing command and returning information
 func (tio *Timeout) Run() (ExitStatus, string, string, error) {
 	cmd := tio.Cmd
 	var outBuffer, errBuffer bytes.Buffer
@@ -118,7 +118,7 @@ func (tio *Timeout) Run() (ExitStatus, string, string, error) {
 	return exitSt, string(outBuffer.Bytes()), string(errBuffer.Bytes()), nil
 }
 
-// RunSimple execute command and only returns integer as exit code. It is mainly for go-timeout command
+// RunSimple executes command and only returns integer as exit code. It is mainly for go-timeout command
 func (tio *Timeout) RunSimple(preserveStatus bool) int {
 	cmd := tio.Cmd
 
