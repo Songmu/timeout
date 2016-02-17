@@ -9,8 +9,7 @@ import (
 	"time"
 
 	"github.com/Songmu/timeout"
-
-	"code.google.com/p/getopt"
+	"github.com/pborman/getopt"
 )
 
 func main() {
