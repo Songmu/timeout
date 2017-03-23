@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 
 	"syscall"
 	"time"
@@ -79,7 +80,6 @@ func (ex ExitStatus) GetExitCode() int {
 		return ex.Code
 	}
 }
-
 
 // GetChildExitCode gets the exit code of the Cmd itself
 func (ex ExitStatus) GetChildExitCode() int {
@@ -215,6 +215,9 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 		select {
 		case ex.Code = <-exitChan:
 		case <-time.After(tio.KillAfter):
+			if runtime.GOOS == "windows" {
+				exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(cmd.Process.Pid)).Run()
+			}
 			cmd.Process.Kill()
 			ex.Code = exitKilled
 			ex.typ = exitTypeKilled
