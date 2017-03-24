@@ -214,7 +214,7 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 		select {
 		case ex.Code = <-exitChan:
 		case <-time.After(tio.KillAfter):
-			tio.kill()
+			tio.killall()
 			ex.Code = exitKilled
 			ex.typ = exitTypeKilled
 		}
