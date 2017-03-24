@@ -72,7 +72,7 @@ func TestPreserveStatus(t *testing.T) {
 		t.Skipf("skip test on Windows")
 	}
 	tio := &Timeout{
-		Cmd:      exec.Command("perl", "test/exit_with_23.pl"),
+		Cmd:      exec.Command("perl", "testdata/exit_with_23.pl"),
 		Duration: 1 * time.Second,
 	}
 
@@ -84,7 +84,7 @@ func TestPreserveStatus(t *testing.T) {
 
 func TestKillAfter(t *testing.T) {
 	tio := &Timeout{
-		Cmd:       exec.Command("perl", "test/ignore_sigterm.pl"),
+		Cmd:       exec.Command("perl", "testdata/ignore_sigterm.pl"),
 		Signal:    syscall.SIGTERM,
 		Duration:  1 * time.Second,
 		KillAfter: 1 * time.Second,
@@ -98,7 +98,7 @@ func TestKillAfter(t *testing.T) {
 
 func TestKillAfterNotKilled(t *testing.T) {
 	tio := &Timeout{
-		Cmd:       exec.Command("perl", "test/ignore_sigterm.pl"),
+		Cmd:       exec.Command("perl", "testdata/ignore_sigterm.pl"),
 		Signal:    syscall.SIGTERM,
 		Duration:  1 * time.Second,
 		KillAfter: 5 * time.Second,
@@ -116,7 +116,7 @@ func TestCommandCannotBeInvoked(t *testing.T) {
 		t.Skipf("skip test on Windows")
 	}
 	tio := &Timeout{
-		Cmd:      exec.Command("test/dummy"),
+		Cmd:      exec.Command("testdata/dummy"),
 		Duration: 1 * time.Second,
 	}
 	exit := tio.RunSimple(false)
@@ -132,7 +132,7 @@ func TestCommandNotFound(t *testing.T) {
 		t.Skipf("skip test on Windows")
 	}
 	tio := &Timeout{
-		Cmd:      exec.Command("test/ignore_sigterm.pl-xxxxxxxxxxxxxxxxxxxxx"),
+		Cmd:      exec.Command("testdata/ignore_sigterm.pl-xxxxxxxxxxxxxxxxxxxxx"),
 		Duration: 1 * time.Second,
 	}
 	exit := tio.RunSimple(false)
