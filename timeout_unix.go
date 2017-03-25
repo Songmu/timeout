@@ -8,11 +8,10 @@ import (
 )
 
 func (tio *Timeout) getCmd() *exec.Cmd {
-	cmd := tio.Cmd
-	if cmd.SysProcAttr == nil {
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if tio.Cmd.SysProcAttr == nil {
+		tio.Cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	}
-	return cmd
+	return tio.Cmd
 }
 
 func (tio *Timeout) killall() error {
