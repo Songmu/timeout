@@ -15,7 +15,6 @@ lint: deps
 	golint -set_exit_status ./...
 
 cover: deps
-	go get github.com/axw/gocov/gocov
 	goveralls
 
 .PHONY: test deps lint cover

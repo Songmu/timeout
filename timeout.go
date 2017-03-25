@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strconv"
 
 	"syscall"
 	"time"
@@ -104,7 +103,7 @@ func (tio *Timeout) signal() os.Signal {
 
 // Run is synchronous interface of executing command and returning information
 func (tio *Timeout) Run() (ExitStatus, string, string, error) {
-	cmd := tio.Cmd
+	cmd := tio.getCmd()
 	var outBuffer, errBuffer bytes.Buffer
 	cmd.Stdout = &outBuffer
 	cmd.Stderr = &errBuffer
@@ -120,7 +119,7 @@ func (tio *Timeout) Run() (ExitStatus, string, string, error) {
 
 // RunSimple executes command and only returns integer as exit code. It is mainly for go-timeout command
 func (tio *Timeout) RunSimple(preserveStatus bool) int {
-	cmd := tio.Cmd
+	cmd := tio.getCmd()
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -168,7 +167,7 @@ func getExitCodeFromErr(err error) int {
 
 // RunCommand is executing the command and handling timeout. This is primitive interface of Timeout
 func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
-	cmd := tio.Cmd
+	cmd := tio.getCmd()
 
 	if err := cmd.Start(); err != nil {
 		switch {
@@ -199,7 +198,7 @@ func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
 }
 
 func (tio *Timeout) handleTimeout() (ex ExitStatus) {
-	cmd := tio.Cmd
+	cmd := tio.getCmd()
 	exitChan := getExitChan(cmd)
 	select {
 	case exitCode := <-exitChan:
@@ -215,9 +214,8 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 		select {
 		case ex.Code = <-exitChan:
 		case <-time.After(tio.KillAfter):
-			if runtime.GOOS == "windows" {
-				exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(cmd.Process.Pid)).Run()
-			}
+			tio.killall()
+			// just to make sure
 			cmd.Process.Kill()
 			ex.Code = exitKilled
 			ex.typ = exitTypeKilled
