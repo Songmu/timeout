@@ -215,6 +215,8 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 		case ex.Code = <-exitChan:
 		case <-time.After(tio.KillAfter):
 			tio.killall()
+			// just to make sure
+			cmd.Process.Kill()
 			ex.Code = exitKilled
 			ex.typ = exitTypeKilled
 		}
