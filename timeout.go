@@ -207,7 +207,7 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 		ex.typ = exitTypeNormal
 		return ex
 	case <-time.After(tio.Duration):
-		cmd.Process.Signal(tio.signal()) // XXX error handling
+		tio.terminate()
 		ex.typ = exitTypeTimedOut
 	}
 

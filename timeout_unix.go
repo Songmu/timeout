@@ -14,6 +14,10 @@ func (tio *Timeout) getCmd() *exec.Cmd {
 	return tio.Cmd
 }
 
+func (tio *Timeout) terminate() error {
+	return cmd.Process.Signal(tio.signal())
+}
+
 func (tio *Timeout) killall() error {
 	return syscall.Kill(-tio.Cmd.Process.Pid, syscall.SIGKILL)
 }
