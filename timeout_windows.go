@@ -16,7 +16,7 @@ func (tio *Timeout) getCmd() *exec.Cmd {
 }
 
 func (tio *Timeout) terminate() error {
-	return cmd.Process.Signal(tio.signal())
+	return tio.Cmd.Process.Signal(tio.signal())
 }
 
 func (tio *Timeout) killall() error {
