@@ -15,8 +15,8 @@ import (
 func main() {
 	optKillAfter := getopt.StringLong("kill-after", 'k', "", "also send a KILL signal if COMMAND is still running. this long after the initial signal was sent")
 	optSig := getopt.StringLong("signal", 's', "", "specify the signal to be sent on timeout. IGNAL may be a name like 'HUP' or a number. see 'kill -l' for a list of signals")
-	optForeground := getopt.BoolLong("foreground", 'f', "when not running timeout directly from a shell prompt, allow COMMAND to read from the TTY and get TTY signals. in this mode, children of COMMAND will not be timed out")
-	p := getopt.BoolLong("preserve-status", 0, "help message for bool")
+	optForeground := getopt.BoolLong("foreground", 0, "when not running timeout directly from a shell prompt, allow COMMAND to read from the TTY and get TTY signals. in this mode, children of COMMAND will not be timed out")
+	p := getopt.BoolLong("preserve-status", 0, "exit with the same status as COMMAND, even when the command times out")
 
 	opts := getopt.CommandLine
 	opts.Parse(os.Args)
