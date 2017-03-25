@@ -8,7 +8,7 @@ import (
 )
 
 func (tio *Timeout) getCmd() *exec.Cmd {
-	if !tio.Foreground && tio.Cmd.SysProcAttr == nil {
+	if tio.Cmd.SysProcAttr == nil {
 		tio.Cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	}
 	return tio.Cmd
