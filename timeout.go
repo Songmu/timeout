@@ -15,10 +15,11 @@ import (
 
 // Timeout is main struct of timeout package
 type Timeout struct {
-	Duration  time.Duration
-	KillAfter time.Duration
-	Signal    os.Signal
-	Cmd       *exec.Cmd
+	Duration   time.Duration
+	KillAfter  time.Duration
+	Signal     os.Signal
+	Foreground bool
+	Cmd        *exec.Cmd
 }
 
 var defaultSignal os.Signal
@@ -206,7 +207,7 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 		ex.typ = exitTypeNormal
 		return ex
 	case <-time.After(tio.Duration):
-		cmd.Process.Signal(tio.signal()) // XXX error handling
+		tio.terminate()
 		ex.typ = exitTypeTimedOut
 	}
 
