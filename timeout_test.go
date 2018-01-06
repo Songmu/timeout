@@ -22,18 +22,6 @@ func init() {
 	}
 }
 
-func TestRunSimple(t *testing.T) {
-	tio := &Timeout{
-		Duration: time.Duration(0.1 * float64(time.Second)),
-		Cmd:      exec.Command(shellcmd, shellflag, "echo 1"),
-	}
-	exit := tio.RunSimple(false)
-
-	if exit != 0 {
-		t.Errorf("something wrong")
-	}
-}
-
 func TestRun(t *testing.T) {
 	tio := &Timeout{
 		Duration: 10 * time.Second,
@@ -54,106 +42,88 @@ func TestRun(t *testing.T) {
 	}
 }
 
-func TestRunTimeout(t *testing.T) {
-	tio := &Timeout{
-		Cmd:      exec.Command(shellcmd, shellflag, "sleep 3"),
-		Duration: 1 * time.Second,
-		Signal:   os.Interrupt,
-	}
-	exit := tio.RunSimple(false)
+var isWin = runtime.GOOS == "windows"
 
-	if exit != 124 {
-		t.Errorf("something wrong")
+func TestRunSimple(t *testing.T) {
+	testCases := []struct {
+		name           string
+		duration       time.Duration
+		killAfter      time.Duration
+		cmd            *exec.Cmd
+		signal         os.Signal
+		preserveStatus bool
+		expectedExit   int
+		skipOnWin      bool
+	}{
+		{
+			name:         "simple echo",
+			duration:     time.Duration(0.1 * float64(time.Second)),
+			cmd:          exec.Command(shellcmd, shellflag, "echo 1"),
+			expectedExit: 0,
+		},
+		{
+			name:         "timed out",
+			cmd:          exec.Command(shellcmd, shellflag, "sleep 3"),
+			duration:     1 * time.Second,
+			signal:       os.Interrupt,
+			expectedExit: 124,
+		},
+		{
+			name:           "preserve status (signal handled)",
+			cmd:            exec.Command("perl", "testdata/exit_with_23.pl"),
+			duration:       1 * time.Second,
+			preserveStatus: true,
+			expectedExit:   23,
+			skipOnWin:      true,
+		},
+		{
+			name:         "kill after",
+			cmd:          exec.Command("perl", "testdata/ignore_sigterm.pl"),
+			duration:     1 * time.Second,
+			killAfter:    1 * time.Second,
+			signal:       syscall.SIGTERM,
+			expectedExit: exitKilled,
+		},
+		{
+			name:           "ignore sigterm but exited before kill after",
+			cmd:            exec.Command("perl", "testdata/ignore_sigterm.pl"),
+			duration:       1 * time.Second,
+			killAfter:      5 * time.Second,
+			signal:         syscall.SIGTERM,
+			preserveStatus: true,
+			expectedExit:   0,
+		},
+		{
+			name:         "command cannnot be invoked",
+			cmd:          exec.Command("testdata/dummy"),
+			duration:     1 * time.Second,
+			expectedExit: 126, // TODO cmd should return 125 on win
+			skipOnWin:    true,
+		},
+		{
+			name:         "command cannnot be invoked",
+			cmd:          exec.Command("testdata/ignore_sigterm.pl-xxxxxxxxxxxxxxxxxxxxx"),
+			duration:     1 * time.Second,
+			expectedExit: 127, // TODO cmd should return 125 on win
+			skipOnWin:    true,
+		},
 	}
-}
 
-func TestPreserveStatus(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skipf("skip test on Windows")
-	}
-	tio := &Timeout{
-		Cmd:      exec.Command("perl", "testdata/exit_with_23.pl"),
-		Duration: 1 * time.Second,
-	}
-
-	exit := tio.RunSimple(true)
-	if exit != 23 {
-		t.Errorf("something wrong: %v", exit)
-	}
-}
-
-func TestKillAfter(t *testing.T) {
-	tio := &Timeout{
-		Cmd:       exec.Command("perl", "testdata/ignore_sigterm.pl"),
-		Signal:    syscall.SIGTERM,
-		Duration:  1 * time.Second,
-		KillAfter: 1 * time.Second,
-	}
-	exit := tio.RunSimple(false)
-
-	if exit != 137 {
-		t.Errorf("something wrong: %v", exit)
-	}
-}
-
-func TestKillAfterNotKilled(t *testing.T) {
-	tio := &Timeout{
-		Cmd:       exec.Command("perl", "testdata/ignore_sigterm.pl"),
-		Signal:    syscall.SIGTERM,
-		Duration:  1 * time.Second,
-		KillAfter: 5 * time.Second,
-	}
-	exit := tio.RunSimple(true)
-
-	if exit != 0 {
-		t.Errorf("something wrong: %v", exit)
-	}
-}
-
-func TestIgnoreSignal(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skipf("skip test on Windows")
-	}
-	tio := &Timeout{
-		Cmd:      exec.Command("perl", "testdata/ignore_sigterm_with_exit3.pl"),
-		Signal:   syscall.SIGTERM,
-		Duration: 1 * time.Second,
-	}
-	exit := tio.RunSimple(true)
-
-	if exit != 3 {
-		t.Errorf("something wrong: %v", exit)
-	}
-}
-
-func TestCommandCannotBeInvoked(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// TODO cmd return 125 for this case
-		t.Skipf("skip test on Windows")
-	}
-	tio := &Timeout{
-		Cmd:      exec.Command("testdata/dummy"),
-		Duration: 1 * time.Second,
-	}
-	exit := tio.RunSimple(false)
-
-	if exit != 126 {
-		t.Errorf("something wrong: %v", exit)
-	}
-}
-
-func TestCommandNotFound(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// TODO cmd return 125 for this case
-		t.Skipf("skip test on Windows")
-	}
-	tio := &Timeout{
-		Cmd:      exec.Command("testdata/ignore_sigterm.pl-xxxxxxxxxxxxxxxxxxxxx"),
-		Duration: 1 * time.Second,
-	}
-	exit := tio.RunSimple(false)
-
-	if exit != 127 {
-		t.Errorf("something wrong: %v", exit)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.skipOnWin && isWin {
+				t.Skipf("%s: skip on windows", tc.name)
+			}
+			tio := &Timeout{
+				Duration:  tc.duration,
+				KillAfter: tc.killAfter,
+				Cmd:       tc.cmd,
+				Signal:    tc.signal,
+			}
+			exit := tio.RunSimple(tc.preserveStatus)
+			if exit != tc.expectedExit {
+				t.Errorf("%s: expected exitcode: %d, but: %d", tc.name, tc.expectedExit, exit)
+			}
+		})
 	}
 }
