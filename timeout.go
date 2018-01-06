@@ -226,7 +226,6 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 			ex.typ = exitTypeKilled
 		}
 	}
-	return ex
 }
 
 func getExitChan(cmd *exec.Cmd) chan syscall.WaitStatus {
