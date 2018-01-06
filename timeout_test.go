@@ -89,7 +89,7 @@ func TestKillAfter(t *testing.T) {
 		Duration:  1 * time.Second,
 		KillAfter: 1 * time.Second,
 	}
-	exit := tio.RunSimple(true)
+	exit := tio.RunSimple(false)
 
 	if exit != 137 {
 		t.Errorf("something wrong: %v", exit)
