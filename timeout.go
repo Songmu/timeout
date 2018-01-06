@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"reflect"
 	"runtime"
 
 	"syscall"
@@ -55,8 +56,8 @@ func (err *Error) Error() string {
 
 // ExitStatus stores exit information of the command
 type ExitStatus struct {
-	Code     int
-	typ      exitType
+	Code int
+	typ  exitType
 }
 
 // IsTimedOut returns the command timed out or not
@@ -90,7 +91,7 @@ type exitType int
 
 // exit types
 const (
-	exitTypeNormal exitType = iota + 1
+	exitTypeNormal exitType = iota
 	exitTypeTimedOut
 	exitTypeKilled
 )
@@ -188,32 +189,40 @@ func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
 func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 	cmd := tio.getCmd()
 	exitChan := getExitChan(cmd)
-	select {
-	case st := <-exitChan:
-		ex.Code = wrapcommander.WaitStatusToExitCode(st)
-		ex.typ = exitTypeNormal
-		return ex
-	case <-time.After(tio.Duration):
-		tio.terminate()
-		ex.typ = exitTypeTimedOut
+	cases := []reflect.SelectCase{
+		{ // 0: command exit
+			Chan: reflect.ValueOf(exitChan),
+			Dir:  reflect.SelectRecv,
+		},
+		{ // 1: timed out and send signal
+			Chan: reflect.ValueOf(time.After(tio.Duration)),
+			Dir:  reflect.SelectRecv,
+		},
 	}
-
 	if tio.KillAfter > 0 {
-		select {
-		case st := <-exitChan:
+		// 2: send KILL signal
+		cases = append(cases, reflect.SelectCase{
+			Chan: reflect.ValueOf(time.After(tio.Duration + tio.KillAfter)),
+			Dir:  reflect.SelectRecv,
+		})
+	}
+	for {
+		chosen, recv, _ := reflect.Select(cases)
+		switch chosen {
+		case 0:
+			st := recv.Interface().(syscall.WaitStatus)
 			ex.Code = wrapcommander.WaitStatusToExitCode(st)
-		case <-time.After(tio.KillAfter):
+			return ex
+		case 1:
+			tio.terminate()
+			ex.typ = exitTypeTimedOut
+		case 2:
 			tio.killall()
 			// just to make sure
 			cmd.Process.Kill()
-			ex.Code = exitKilled
 			ex.typ = exitTypeKilled
 		}
-	} else {
-		st := <-exitChan
-		ex.Code = wrapcommander.WaitStatusToExitCode(st)
 	}
-
 	return ex
 }
 
