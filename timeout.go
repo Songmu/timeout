@@ -11,6 +11,8 @@ import (
 
 	"syscall"
 	"time"
+
+	"github.com/Songmu/wrapcommander"
 )
 
 // Timeout is main struct of timeout package
@@ -35,12 +37,10 @@ func init() {
 
 // exit statuses are same with GNU timeout
 const (
-	exitNormal            = 0
-	exitTimedOut          = 124
-	exitUnknownErr        = 125
-	exitCommandNotInvoked = 126
-	exitCommandNotFound   = 127
-	exitKilled            = 137
+	exitNormal     = 0
+	exitTimedOut   = 124
+	exitUnknownErr = 125
+	exitKilled     = 137
 )
 
 // Error is error of timeout
@@ -171,22 +171,9 @@ func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
 	cmd := tio.getCmd()
 
 	if err := cmd.Start(); err != nil {
-		switch {
-		case os.IsNotExist(err):
-			return nil, &Error{
-				ExitCode: exitCommandNotFound,
-				Err:      err,
-			}
-		case os.IsPermission(err):
-			return nil, &Error{
-				ExitCode: exitCommandNotInvoked,
-				Err:      err,
-			}
-		default:
-			return nil, &Error{
-				ExitCode: exitUnknownErr,
-				Err:      err,
-			}
+		return nil, &Error{
+			ExitCode: wrapcommander.ResolveExitCode(err),
+			Err:      err,
 		}
 	}
 
@@ -232,20 +219,7 @@ func getExitChan(cmd *exec.Cmd) chan int {
 	ch := make(chan int)
 	go func() {
 		err := cmd.Wait()
-		ch <- resolveExitCode(err)
+		ch <- wrapcommander.ResolveExitCode(err)
 	}()
 	return ch
-}
-
-func resolveExitCode(err error) int {
-	if err != nil {
-		if exiterr, ok := err.(*exec.ExitError); ok {
-			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-				return status.ExitStatus()
-			}
-		}
-		// The exit codes in some platforms aren't integer. e.g. plan9.
-		return -1
-	}
-	return exitNormal
 }
