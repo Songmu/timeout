@@ -4,17 +4,18 @@ timeout
 [![Build Status](https://travis-ci.org/Songmu/timeout.png?branch=master)][travis]
 [![Coverage Status](https://coveralls.io/repos/Songmu/timeout/badge.png?branch=master)][coveralls]
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)][license]
+[![GoDoc](https://godoc.org/github.com/Songmu/timeout?status.svg)][godoc]
 
 [travis]: https://travis-ci.org/Songmu/timeout
 [coveralls]: https://coveralls.io/r/Songmu/timeout?branch=master
 [license]: https://github.com/Songmu/timeout/blob/master/LICENSE
+[godoc]: https://godoc.org/github.com/Songmu/timeout
 
-Timeout invocation.
+Timeout invocation. Go porting of GNU timeout
 
 ## Description
 
 Run a given command with a time limit.
-
 
 ## Disclaimer
 
