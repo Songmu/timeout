@@ -55,8 +55,8 @@ func (err *Error) Error() string {
 
 // ExitStatus stores exit information of the command
 type ExitStatus struct {
-	Code int
-	typ  exitType
+	Code     int
+	typ      exitType
 }
 
 // IsTimedOut returns the command timed out or not
@@ -189,8 +189,8 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 	cmd := tio.getCmd()
 	exitChan := getExitChan(cmd)
 	select {
-	case exitCode := <-exitChan:
-		ex.Code = exitCode
+	case st := <-exitChan:
+		ex.Code = wrapcommander.WaitStatusToExitCode(st)
 		ex.typ = exitTypeNormal
 		return ex
 	case <-time.After(tio.Duration):
@@ -200,7 +200,8 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 
 	if tio.KillAfter > 0 {
 		select {
-		case ex.Code = <-exitChan:
+		case st := <-exitChan:
+			ex.Code = wrapcommander.WaitStatusToExitCode(st)
 		case <-time.After(tio.KillAfter):
 			tio.killall()
 			// just to make sure
@@ -209,17 +210,19 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 			ex.typ = exitTypeKilled
 		}
 	} else {
-		ex.Code = <-exitChan
+		st := <-exitChan
+		ex.Code = wrapcommander.WaitStatusToExitCode(st)
 	}
 
 	return ex
 }
 
-func getExitChan(cmd *exec.Cmd) chan int {
-	ch := make(chan int)
+func getExitChan(cmd *exec.Cmd) chan syscall.WaitStatus {
+	ch := make(chan syscall.WaitStatus)
 	go func() {
 		err := cmd.Wait()
-		ch <- wrapcommander.ResolveExitCode(err)
+		st, _ := wrapcommander.ErrorToWaitStatus(err)
+		ch <- st
 	}()
 	return ch
 }
