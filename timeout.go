@@ -56,8 +56,9 @@ func (err *Error) Error() string {
 
 // ExitStatus stores exit information of the command
 type ExitStatus struct {
-	Code int
-	typ  exitType
+	Code     int
+	Signaled bool
+	typ      exitType
 }
 
 // IsTimedOut returns the command timed out or not
@@ -210,8 +211,10 @@ func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 		chosen, recv, _ := reflect.Select(cases)
 		switch chosen {
 		case 0:
-			st := recv.Interface().(syscall.WaitStatus)
-			ex.Code = wrapcommander.WaitStatusToExitCode(st)
+			if st, ok := recv.Interface().(syscall.WaitStatus); ok {
+				ex.Code = wrapcommander.WaitStatusToExitCode(st)
+				ex.Signaled = st.Signaled()
+			}
 			return ex
 		case 1:
 			tio.terminate()
