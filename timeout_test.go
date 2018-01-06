@@ -110,6 +110,19 @@ func TestKillAfterNotKilled(t *testing.T) {
 	}
 }
 
+func TestIgnoreSignal(t *testing.T) {
+	tio := &Timeout{
+		Cmd:      exec.Command("perl", "testdata/ignore_sigterm_with_exit3.pl"),
+		Signal:   syscall.SIGTERM,
+		Duration: 1 * time.Second,
+	}
+	exit := tio.RunSimple(true)
+
+	if exit != 3 {
+		t.Errorf("something wrong: %v", exit)
+	}
+}
+
 func TestCommandCannotBeInvoked(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		// TODO cmd return 125 for this case
