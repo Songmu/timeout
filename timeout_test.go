@@ -89,7 +89,7 @@ func TestKillAfter(t *testing.T) {
 		Duration:  1 * time.Second,
 		KillAfter: 1 * time.Second,
 	}
-	exit := tio.RunSimple(true)
+	exit := tio.RunSimple(false)
 
 	if exit != 137 {
 		t.Errorf("something wrong: %v", exit)
@@ -106,6 +106,22 @@ func TestKillAfterNotKilled(t *testing.T) {
 	exit := tio.RunSimple(true)
 
 	if exit != 0 {
+		t.Errorf("something wrong: %v", exit)
+	}
+}
+
+func TestIgnoreSignal(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skipf("skip test on Windows")
+	}
+	tio := &Timeout{
+		Cmd:      exec.Command("perl", "testdata/ignore_sigterm_with_exit3.pl"),
+		Signal:   syscall.SIGTERM,
+		Duration: 1 * time.Second,
+	}
+	exit := tio.RunSimple(true)
+
+	if exit != 3 {
 		t.Errorf("something wrong: %v", exit)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"reflect"
 	"runtime"
 
 	"syscall"
@@ -55,8 +56,9 @@ func (err *Error) Error() string {
 
 // ExitStatus stores exit information of the command
 type ExitStatus struct {
-	Code int
-	typ  exitType
+	Code     int
+	Signaled bool
+	typ      exitType
 }
 
 // IsTimedOut returns the command timed out or not
@@ -90,7 +92,7 @@ type exitType int
 
 // exit types
 const (
-	exitTypeNormal exitType = iota + 1
+	exitTypeNormal exitType = iota
 	exitTypeTimedOut
 	exitTypeKilled
 )
@@ -188,38 +190,50 @@ func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
 func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 	cmd := tio.getCmd()
 	exitChan := getExitChan(cmd)
-	select {
-	case exitCode := <-exitChan:
-		ex.Code = exitCode
-		ex.typ = exitTypeNormal
-		return ex
-	case <-time.After(tio.Duration):
-		tio.terminate()
-		ex.typ = exitTypeTimedOut
+	cases := []reflect.SelectCase{
+		{ // 0: command exit
+			Chan: reflect.ValueOf(exitChan),
+			Dir:  reflect.SelectRecv,
+		},
+		{ // 1: timed out and send signal
+			Chan: reflect.ValueOf(time.After(tio.Duration)),
+			Dir:  reflect.SelectRecv,
+		},
 	}
-
 	if tio.KillAfter > 0 {
-		select {
-		case ex.Code = <-exitChan:
-		case <-time.After(tio.KillAfter):
+		// 2: send KILL signal
+		cases = append(cases, reflect.SelectCase{
+			Chan: reflect.ValueOf(time.After(tio.Duration + tio.KillAfter)),
+			Dir:  reflect.SelectRecv,
+		})
+	}
+	for {
+		chosen, recv, _ := reflect.Select(cases)
+		switch chosen {
+		case 0:
+			if st, ok := recv.Interface().(syscall.WaitStatus); ok {
+				ex.Code = wrapcommander.WaitStatusToExitCode(st)
+				ex.Signaled = st.Signaled()
+			}
+			return ex
+		case 1:
+			tio.terminate()
+			ex.typ = exitTypeTimedOut
+		case 2:
 			tio.killall()
 			// just to make sure
 			cmd.Process.Kill()
-			ex.Code = exitKilled
 			ex.typ = exitTypeKilled
 		}
-	} else {
-		ex.Code = <-exitChan
 	}
-
-	return ex
 }
 
-func getExitChan(cmd *exec.Cmd) chan int {
-	ch := make(chan int)
+func getExitChan(cmd *exec.Cmd) chan syscall.WaitStatus {
+	ch := make(chan syscall.WaitStatus)
 	go func() {
 		err := cmd.Wait()
-		ch <- wrapcommander.ResolveExitCode(err)
+		st, _ := wrapcommander.ErrorToWaitStatus(err)
+		ch <- st
 	}()
 	return ch
 }
