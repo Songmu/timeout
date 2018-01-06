@@ -111,6 +111,9 @@ func TestKillAfterNotKilled(t *testing.T) {
 }
 
 func TestIgnoreSignal(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skipf("skip test on Windows")
+	}
 	tio := &Timeout{
 		Cmd:      exec.Command("perl", "testdata/ignore_sigterm_with_exit3.pl"),
 		Signal:   syscall.SIGTERM,
