@@ -4,16 +4,16 @@ package timeout
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
-	"reflect"
-	"runtime"
 	"syscall"
 	"time"
 
 	"github.com/Songmu/wrapcommander"
 )
+
+// overwritten with syscall.SIGTERM on unix environment (see timeout_unix.go)
+var defaultSignal = os.Interrupt
 
 // Timeout is main struct of timeout package
 type Timeout struct {
@@ -22,17 +22,6 @@ type Timeout struct {
 	Signal     os.Signal
 	Foreground bool
 	Cmd        *exec.Cmd
-}
-
-var defaultSignal os.Signal
-
-func init() {
-	switch runtime.GOOS {
-	case "windows":
-		defaultSignal = os.Interrupt
-	default:
-		defaultSignal = syscall.SIGTERM
-	}
 }
 
 // exit statuses are same with GNU timeout
@@ -122,33 +111,14 @@ func (tio *Timeout) Run() (ExitStatus, string, string, error) {
 // RunSimple executes command and only returns integer as exit code. It is mainly for go-timeout command
 func (tio *Timeout) RunSimple(preserveStatus bool) int {
 	cmd := tio.getCmd()
-
-	stdoutPipe, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return exitUnknownErr
-	}
-	stderrPipe, err := cmd.StderrPipe()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return exitUnknownErr
-	}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	ch, err := tio.RunCommand()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return getExitCodeFromErr(err)
 	}
-
-	go func() {
-		defer stdoutPipe.Close()
-		io.Copy(os.Stdout, stdoutPipe)
-	}()
-
-	go func() {
-		defer stderrPipe.Close()
-		io.Copy(os.Stderr, stderrPipe)
-	}()
 
 	exitSt := <-ch
 	if preserveStatus {
@@ -189,36 +159,20 @@ func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
 func (tio *Timeout) handleTimeout() (ex ExitStatus) {
 	cmd := tio.getCmd()
 	exitChan := getExitChan(cmd)
-	cases := []reflect.SelectCase{
-		{ // 0: command exit
-			Chan: reflect.ValueOf(exitChan),
-			Dir:  reflect.SelectRecv,
-		},
-		{ // 1: timed out and send signal
-			Chan: reflect.ValueOf(time.After(tio.Duration)),
-			Dir:  reflect.SelectRecv,
-		},
-	}
+	var killCh <-chan time.Time
 	if tio.KillAfter > 0 {
-		// 2: send KILL signal
-		cases = append(cases, reflect.SelectCase{
-			Chan: reflect.ValueOf(time.After(tio.Duration + tio.KillAfter)),
-			Dir:  reflect.SelectRecv,
-		})
+		killCh = time.After(tio.Duration + tio.KillAfter)
 	}
 	for {
-		chosen, recv, _ := reflect.Select(cases)
-		switch chosen {
-		case 0:
-			if st, ok := recv.Interface().(syscall.WaitStatus); ok {
-				ex.Code = wrapcommander.WaitStatusToExitCode(st)
-				ex.Signaled = st.Signaled()
-			}
+		select {
+		case st := <-exitChan:
+			ex.Code = wrapcommander.WaitStatusToExitCode(st)
+			ex.Signaled = st.Signaled()
 			return ex
-		case 1:
+		case <-time.After(tio.Duration):
 			tio.terminate()
 			ex.typ = exitTypeTimedOut
-		case 2:
+		case <-killCh:
 			tio.killall()
 			// just to make sure
 			cmd.Process.Kill()
