@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.2.1](https://github.com/Songmu/timeout/compare/v0.2.0...v0.2.1) (2018-01-07)
+
+* send SIGCONT after sending termination signal just to make sure [#14](https://github.com/Songmu/timeout/pull/14) ([Songmu](https://github.com/Songmu))
+* remove reflect and refactor [#13](https://github.com/Songmu/timeout/pull/13) ([Songmu](https://github.com/Songmu))
+
 ## [v0.2.0](https://github.com/Songmu/timeout/compare/v0.1.0...v0.2.0) (2018-01-07)
 
 * Adjust files for releasing [#12](https://github.com/Songmu/timeout/pull/12) ([Songmu](https://github.com/Songmu))
