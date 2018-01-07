@@ -17,10 +17,6 @@ Timeout invocation. Go porting of GNU timeout
 
 Run a given command with a time limit.
 
-## Disclaimer
-
-This software is still alpha quality. We may change APIs without notice.
-
 ## Synopsis
 
 	tio := &timeout.Timeout{
