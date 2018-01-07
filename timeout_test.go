@@ -69,6 +69,14 @@ func TestRunSimple(t *testing.T) {
 			expectedExit: 124,
 		},
 		{
+			name:           "timed out with preserve status",
+			cmd:            exec.Command(shellcmd, shellflag, "sleep 3"),
+			duration:       time.Duration(0.1 * float64(time.Second)),
+			preserveStatus: true,
+			expectedExit:   128 + 15,
+			skipOnWin:      true,
+		},
+		{
 			name:           "preserve status (signal handled)",
 			cmd:            exec.Command("perl", "testdata/exit_with_23.pl"),
 			duration:       1 * time.Second,

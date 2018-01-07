@@ -7,6 +7,10 @@ import (
 	"syscall"
 )
 
+func init() {
+	defaultSignal = syscall.SIGTERM
+}
+
 func (tio *Timeout) getCmd() *exec.Cmd {
 	if tio.Cmd.SysProcAttr == nil {
 		tio.Cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
