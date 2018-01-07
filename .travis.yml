@@ -1,4 +1,7 @@
 language: go
+os:
+- linux
+- osx
 go:
 - tip
 script:
