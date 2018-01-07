@@ -19,11 +19,19 @@ func (tio *Timeout) getCmd() *exec.Cmd {
 }
 
 func (tio *Timeout) terminate() error {
-	syssig, ok := tio.signal().(syscall.Signal)
+	sig := tio.signal()
+	syssig, ok := sig.(syscall.Signal)
 	if !ok || tio.Foreground {
-		return tio.Cmd.Process.Signal(tio.signal())
+		return tio.Cmd.Process.Signal(sig)
 	}
-	return syscall.Kill(-tio.Cmd.Process.Pid, syssig)
+	err := syscall.Kill(-tio.Cmd.Process.Pid, syssig)
+	if err != nil {
+		return err
+	}
+	if syssig != syscall.SIGKILL && syssig != syscall.SIGCONT {
+		return syscall.Kill(-tio.Cmd.Process.Pid, syscall.SIGCONT)
+	}
+	return nil
 }
 
 func (tio *Timeout) killall() error {
