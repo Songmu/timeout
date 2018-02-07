@@ -153,6 +153,7 @@ func (tio *Timeout) handleTimeout(ctx context.Context) *ExitStatus {
 			tio.killall()
 			// just to make sure
 			cmd.Process.Kill()
+			ex.killed = true
 			if ex.typ != exitTypeCanceled {
 				ex.typ = exitTypeKilled
 			}
