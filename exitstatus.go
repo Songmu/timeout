@@ -8,17 +8,17 @@ type ExitStatus struct {
 }
 
 // IsTimedOut returns the command timed out or not
-func (ex ExitStatus) IsTimedOut() bool {
+func (ex *ExitStatus) IsTimedOut() bool {
 	return ex.typ == exitTypeTimedOut || ex.typ == exitTypeKilled
 }
 
 // IsKilled returns the command is killed or not
-func (ex ExitStatus) IsKilled() bool {
+func (ex *ExitStatus) IsKilled() bool {
 	return ex.typ == exitTypeKilled
 }
 
 // GetExitCode gets the exit code for command line tools
-func (ex ExitStatus) GetExitCode() int {
+func (ex *ExitStatus) GetExitCode() int {
 	switch {
 	case ex.IsKilled():
 		return exitKilled
@@ -30,7 +30,7 @@ func (ex ExitStatus) GetExitCode() int {
 }
 
 // GetChildExitCode gets the exit code of the Cmd itself
-func (ex ExitStatus) GetChildExitCode() int {
+func (ex *ExitStatus) GetChildExitCode() int {
 	return ex.Code
 }
 

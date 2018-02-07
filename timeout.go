@@ -51,7 +51,7 @@ func (tio *Timeout) signal() os.Signal {
 }
 
 // Run is synchronous interface of executing command and returning information
-func (tio *Timeout) Run() (ExitStatus, string, string, error) {
+func (tio *Timeout) Run() (*ExitStatus, string, string, error) {
 	cmd := tio.getCmd()
 	var outBuffer, errBuffer bytes.Buffer
 	cmd.Stdout = &outBuffer
@@ -60,7 +60,7 @@ func (tio *Timeout) Run() (ExitStatus, string, string, error) {
 	ch, err := tio.RunCommand()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		return ExitStatus{}, string(outBuffer.Bytes()), string(errBuffer.Bytes()), err
+		return nil, string(outBuffer.Bytes()), string(errBuffer.Bytes()), err
 	}
 	exitSt := <-ch
 	return exitSt, string(outBuffer.Bytes()), string(errBuffer.Bytes()), nil
@@ -96,20 +96,20 @@ func getExitCodeFromErr(err error) int {
 }
 
 // RunContext runs command with context
-func (tio *Timeout) RunContext(ctx context.Context) (ExitStatus, error) {
+func (tio *Timeout) RunContext(ctx context.Context) (*ExitStatus, error) {
 	exChan, err := tio.runContext(ctx)
 	if err != nil {
-		return ExitStatus{}, err
+		return nil, err
 	}
 	return <-exChan, nil
 }
 
 // RunCommand is executing the command and handling timeout. This is primitive interface of Timeout
-func (tio *Timeout) RunCommand() (<-chan ExitStatus, error) {
+func (tio *Timeout) RunCommand() (<-chan *ExitStatus, error) {
 	return tio.runContext(context.Background())
 }
 
-func (tio *Timeout) runContext(ctx context.Context) (<-chan ExitStatus, error) {
+func (tio *Timeout) runContext(ctx context.Context) (<-chan *ExitStatus, error) {
 	cmd := tio.getCmd()
 
 	if err := cmd.Start(); err != nil {
@@ -119,7 +119,7 @@ func (tio *Timeout) runContext(ctx context.Context) (<-chan ExitStatus, error) {
 		}
 	}
 
-	exitChan := make(chan ExitStatus)
+	exitChan := make(chan *ExitStatus)
 	go func() {
 		exitChan <- tio.handleTimeout(ctx)
 	}()
@@ -127,7 +127,8 @@ func (tio *Timeout) runContext(ctx context.Context) (<-chan ExitStatus, error) {
 	return exitChan, nil
 }
 
-func (tio *Timeout) handleTimeout(ctx context.Context) (ex ExitStatus) {
+func (tio *Timeout) handleTimeout(ctx context.Context) *ExitStatus {
+	ex := &ExitStatus{}
 	cmd := tio.getCmd()
 	exitChan := getExitChan(cmd)
 	var killCh <-chan time.Time
