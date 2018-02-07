@@ -12,6 +12,11 @@ func (ex *ExitStatus) IsTimedOut() bool {
 	return ex.typ == exitTypeTimedOut || ex.typ == exitTypeKilled
 }
 
+// IsCanceled return if the command canceled by context or not
+func (ex *ExitStatus) IsCanceled() bool {
+	return ex.typ == exitTypeCanceled
+}
+
 // IsKilled returns the command is killed or not
 func (ex *ExitStatus) IsKilled() bool {
 	return ex.Code == 137 && ex.Signaled
