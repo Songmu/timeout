@@ -3,6 +3,7 @@ package timeout
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -137,8 +138,21 @@ func getExitCodeFromErr(err error) int {
 	return exitNormal
 }
 
+// RunContext runs command with context
+func (tio *Timeout) RunContext(ctx context.Context) (ExitStatus, error) {
+	exChan, err := tio.runContext(ctx)
+	if err != nil {
+		return ExitStatus{}, err
+	}
+	return <-exChan, nil
+}
+
 // RunCommand is executing the command and handling timeout. This is primitive interface of Timeout
-func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
+func (tio *Timeout) RunCommand() (<-chan ExitStatus, error) {
+	return tio.runContext(context.Background())
+}
+
+func (tio *Timeout) runContext(ctx context.Context) (<-chan ExitStatus, error) {
 	cmd := tio.getCmd()
 
 	if err := cmd.Start(); err != nil {
@@ -150,13 +164,13 @@ func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
 
 	exitChan := make(chan ExitStatus)
 	go func() {
-		exitChan <- tio.handleTimeout()
+		exitChan <- tio.handleTimeout(ctx)
 	}()
 
 	return exitChan, nil
 }
 
-func (tio *Timeout) handleTimeout() (ex ExitStatus) {
+func (tio *Timeout) handleTimeout(ctx context.Context) (ex ExitStatus) {
 	cmd := tio.getCmd()
 	exitChan := getExitChan(cmd)
 	var killCh <-chan time.Time
