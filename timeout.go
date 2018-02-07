@@ -41,6 +41,8 @@ type Timeout struct {
 	Signal     os.Signal
 	Foreground bool
 	Cmd        *exec.Cmd
+
+	KillAfterCancel time.Duration
 }
 
 func (tio *Timeout) signal() os.Signal {
@@ -159,11 +161,18 @@ func (tio *Timeout) handleTimeout(ctx context.Context) *ExitStatus {
 			tio.terminate()
 			ex.typ = exitTypeCanceled
 			go func() {
-				time.Sleep(3 * time.Second)
+				time.Sleep(tio.getKillAfterCancel())
 				killCh <- time.Now()
 			}()
 		}
 	}
+}
+
+func (tio *Timeout) getKillAfterCancel() time.Duration {
+	if tio.KillAfterCancel == 0 {
+		return 3 * time.Second
+	}
+	return tio.KillAfterCancel
 }
 
 func getExitChan(cmd *exec.Cmd) chan syscall.WaitStatus {
