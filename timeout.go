@@ -13,18 +13,6 @@ import (
 	"github.com/Songmu/wrapcommander"
 )
 
-// overwritten with syscall.SIGTERM on unix environment (see timeout_unix.go)
-var defaultSignal = os.Interrupt
-
-// Timeout is main struct of timeout package
-type Timeout struct {
-	Duration   time.Duration
-	KillAfter  time.Duration
-	Signal     os.Signal
-	Foreground bool
-	Cmd        *exec.Cmd
-}
-
 // exit statuses are same with GNU timeout
 const (
 	exitNormal     = 0
@@ -32,6 +20,9 @@ const (
 	exitUnknownErr = 125
 	exitKilled     = 137
 )
+
+// overwritten with syscall.SIGTERM on unix environment (see timeout_unix.go)
+var defaultSignal = os.Interrupt
 
 // Error is error of timeout
 type Error struct {
@@ -43,48 +34,14 @@ func (err *Error) Error() string {
 	return fmt.Sprintf("exit code: %d, %s", err.ExitCode, err.Err.Error())
 }
 
-// ExitStatus stores exit information of the command
-type ExitStatus struct {
-	Code     int
-	Signaled bool
-	typ      exitType
+// Timeout is main struct of timeout package
+type Timeout struct {
+	Duration   time.Duration
+	KillAfter  time.Duration
+	Signal     os.Signal
+	Foreground bool
+	Cmd        *exec.Cmd
 }
-
-// IsTimedOut returns the command timed out or not
-func (ex ExitStatus) IsTimedOut() bool {
-	return ex.typ == exitTypeTimedOut || ex.typ == exitTypeKilled
-}
-
-// IsKilled returns the command is killed or not
-func (ex ExitStatus) IsKilled() bool {
-	return ex.typ == exitTypeKilled
-}
-
-// GetExitCode gets the exit code for command line tools
-func (ex ExitStatus) GetExitCode() int {
-	switch {
-	case ex.IsKilled():
-		return exitKilled
-	case ex.IsTimedOut():
-		return exitTimedOut
-	default:
-		return ex.Code
-	}
-}
-
-// GetChildExitCode gets the exit code of the Cmd itself
-func (ex ExitStatus) GetChildExitCode() int {
-	return ex.Code
-}
-
-type exitType int
-
-// exit types
-const (
-	exitTypeNormal exitType = iota
-	exitTypeTimedOut
-	exitTypeKilled
-)
 
 func (tio *Timeout) signal() os.Signal {
 	if tio.Signal == nil {
