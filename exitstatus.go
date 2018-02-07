@@ -14,7 +14,7 @@ func (ex *ExitStatus) IsTimedOut() bool {
 
 // IsKilled returns the command is killed or not
 func (ex *ExitStatus) IsKilled() bool {
-	return ex.typ == exitTypeKilled
+	return ex.Code == 137 && ex.Signaled
 }
 
 // GetExitCode gets the exit code for command line tools
@@ -41,4 +41,5 @@ const (
 	exitTypeNormal exitType = iota
 	exitTypeTimedOut
 	exitTypeKilled
+	exitTypeCanceled
 )

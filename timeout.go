@@ -131,9 +131,12 @@ func (tio *Timeout) handleTimeout(ctx context.Context) *ExitStatus {
 	ex := &ExitStatus{}
 	cmd := tio.getCmd()
 	exitChan := getExitChan(cmd)
-	var killCh <-chan time.Time
+	killCh := make(chan time.Time)
 	if tio.KillAfter > 0 {
-		killCh = time.After(tio.Duration + tio.KillAfter)
+		go func() {
+			time.Sleep(tio.Duration + tio.KillAfter)
+			killCh <- time.Now()
+		}()
 	}
 	for {
 		select {
@@ -148,7 +151,17 @@ func (tio *Timeout) handleTimeout(ctx context.Context) *ExitStatus {
 			tio.killall()
 			// just to make sure
 			cmd.Process.Kill()
-			ex.typ = exitTypeKilled
+			if ex.typ != exitTypeCanceled {
+				ex.typ = exitTypeKilled
+			}
+		case <-ctx.Done():
+			// XXX handling etx.Err()?
+			tio.terminate()
+			ex.typ = exitTypeCanceled
+			go func() {
+				time.Sleep(3 * time.Second)
+				killCh <- time.Now()
+			}()
 		}
 	}
 }
