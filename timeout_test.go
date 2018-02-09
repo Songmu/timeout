@@ -1,9 +1,11 @@
 package timeout
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"reflect"
 	"runtime"
 	"strings"
 	"syscall"
@@ -141,4 +143,84 @@ func TestRunSimple(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunContext(t *testing.T) {
+	expectedCode := 143
+	if isWin {
+		expectedCode = exitKilled
+	}
+
+	t.Run("cancel", func(t *testing.T) {
+		tio := &Timeout{
+			Duration: 3 * time.Second,
+			Cmd:      exec.Command(stubCmd, "-sleep", "10"),
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			cancel()
+		}()
+		st, err := tio.RunContext(ctx)
+		if err != nil {
+			t.Errorf("error should be nil but: %s", err)
+		}
+		expect := ExitStatus{
+			Code:     expectedCode,
+			Signaled: true,
+			typ:      exitTypeCanceled,
+			killed:   false,
+		}
+		if !reflect.DeepEqual(expect, *st) {
+			t.Errorf("invalid exit status\n   out: %v\nexpect: %v", *st, expect)
+		}
+	})
+
+	t.Run("with timeout", func(t *testing.T) {
+		tio := &Timeout{
+			Duration: 3 * time.Second,
+			Cmd:      exec.Command(stubCmd, "-sleep", "10"),
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+		st, err := tio.RunContext(ctx)
+		if err != nil {
+			t.Errorf("error should be nil but: %s", err)
+		}
+		expect := ExitStatus{
+			Code:     expectedCode,
+			Signaled: true,
+			typ:      exitTypeCanceled,
+			killed:   false,
+		}
+		if !reflect.DeepEqual(expect, *st) {
+			t.Errorf("invalid exit status\n   out: %v\nexpect: %v", *st, expect)
+		}
+	})
+
+	t.Run("with timeout and signal trapped", func(t *testing.T) {
+		if isWin {
+			t.Skip("skip on windows")
+		}
+		tio := &Timeout{
+			Duration:        3 * time.Second,
+			Cmd:             exec.Command(stubCmd, "-sleep", "10", "-trap", "SIGTERM"),
+			KillAfterCancel: time.Duration(10 * time.Millisecond),
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+		st, err := tio.RunContext(ctx)
+		if err != nil {
+			t.Errorf("error should be nil but: %s", err)
+		}
+		expect := ExitStatus{
+			Code:     exitKilled,
+			Signaled: true,
+			typ:      exitTypeCanceled,
+			killed:   true,
+		}
+		if !reflect.DeepEqual(expect, *st) {
+			t.Errorf("invalid exit status\n   out: %v\nexpect: %v", *st, expect)
+		}
+	})
 }
