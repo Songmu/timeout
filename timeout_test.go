@@ -1,6 +1,7 @@
 package timeout
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -15,10 +16,16 @@ var (
 	shellflag = "-c"
 )
 
+const stubCmd = "testdata/stubcmd"
+
 func init() {
 	if runtime.GOOS == "windows" {
 		shellcmd = "cmd"
 		shellflag = "/c"
+	}
+	err := exec.Command("go", "build", "-o", stubCmd, "testdata/stubcmd.go").Run()
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -63,22 +70,22 @@ func TestRunSimple(t *testing.T) {
 		},
 		{
 			name:         "timed out",
-			cmd:          exec.Command(shellcmd, shellflag, "sleep 3"),
+			cmd:          exec.Command(shellcmd, shellflag, fmt.Sprintf("%s -sleep 3", stubCmd)),
 			duration:     1 * time.Second,
 			signal:       os.Interrupt,
 			expectedExit: 124,
 		},
 		{
 			name:           "timed out with preserve status",
-			cmd:            exec.Command(shellcmd, shellflag, "sleep 3"),
+			cmd:            exec.Command(shellcmd, shellflag, fmt.Sprintf("%s -sleep 3", stubCmd)),
 			duration:       time.Duration(0.1 * float64(time.Second)),
 			preserveStatus: true,
 			expectedExit:   128 + 15,
 			skipOnWin:      true,
 		},
 		{
-			name:           "preserve status (signal handled)",
-			cmd:            exec.Command("perl", "testdata/exit_with_23.pl"),
+			name:           "preserve status (signal trapd)",
+			cmd:            exec.Command(stubCmd, "-trap", "SIGTERM", "-trap-exit", "23", "-sleep", "3"),
 			duration:       1 * time.Second,
 			preserveStatus: true,
 			expectedExit:   23,
@@ -86,15 +93,15 @@ func TestRunSimple(t *testing.T) {
 		},
 		{
 			name:         "kill after",
-			cmd:          exec.Command("perl", "testdata/ignore_sigterm.pl"),
+			cmd:          exec.Command(stubCmd, "-trap", "SIGTERM", "-sleep", "3"),
 			duration:     1 * time.Second,
 			killAfter:    1 * time.Second,
 			signal:       syscall.SIGTERM,
 			expectedExit: exitKilled,
 		},
 		{
-			name:           "ignore sigterm but exited before kill after",
-			cmd:            exec.Command("perl", "testdata/ignore_sigterm.pl"),
+			name:           "trap sigterm but exited before kill after",
+			cmd:            exec.Command(stubCmd, "-trap", "SIGTERM", "-sleep", "3"),
 			duration:       1 * time.Second,
 			killAfter:      5 * time.Second,
 			signal:         syscall.SIGTERM,
@@ -109,8 +116,8 @@ func TestRunSimple(t *testing.T) {
 			skipOnWin:    true,
 		},
 		{
-			name:         "command cannnot be invoked",
-			cmd:          exec.Command("testdata/ignore_sigterm.pl-xxxxxxxxxxxxxxxxxxxxx"),
+			name:         "command cannnot be invoked (command not found)",
+			cmd:          exec.Command("testdata/command-not-found"),
 			duration:     1 * time.Second,
 			expectedExit: 127, // TODO cmd should return 125 on win
 			skipOnWin:    true,

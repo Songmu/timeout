@@ -37,7 +37,7 @@ func TestRunCommand_signaled(t *testing.T) {
 	}{
 		{
 			name:     "signal handled",
-			cmd:      exec.Command("perl", "testdata/exit_with_23.pl"),
+			cmd:      exec.Command(stubCmd, "-trap", "SIGTERM", "-trap-exit", "23", "-sleep", "3"),
 			exit:     23,
 			signaled: false,
 		},
