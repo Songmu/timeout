@@ -11,7 +11,7 @@ import (
 
 func TestRunSimple_withStop(t *testing.T) {
 	tio := &Timeout{
-		Duration:  2 * time.Second,
+		Duration:  100 * time.Microsecond,
 		KillAfter: 1 * time.Second,
 		Cmd:       exec.Command(shellcmd, shellflag, "sleep 10"),
 	}
@@ -22,7 +22,7 @@ func TestRunSimple_withStop(t *testing.T) {
 	tio.Cmd.Process.Signal(syscall.SIGSTOP)
 	st := <-ch
 
-	expect := 128 + 15
+	expect := 128 + int(syscall.SIGTERM)
 	if st.Code != expect {
 		t.Errorf("exit code invalid. out: %d, expect: %d", st.Code, expect)
 	}
@@ -43,8 +43,8 @@ func TestRunCommand_signaled(t *testing.T) {
 		},
 		{
 			name:     "termed by sigterm",
-			cmd:      exec.Command("sleep", "3"),
-			exit:     143,
+			cmd:      exec.Command("sleep", "1"),
+			exit:     128 + int(syscall.SIGTERM),
 			signaled: true,
 		},
 	}
@@ -52,7 +52,7 @@ func TestRunCommand_signaled(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tio := &Timeout{
-				Duration:  time.Second,
+				Duration:  100 * time.Millisecond,
 				KillAfter: 3 * time.Second,
 				Cmd:       tc.cmd,
 			}
