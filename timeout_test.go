@@ -16,14 +16,14 @@ import (
 var (
 	shellcmd  = "/bin/sh"
 	shellflag = "-c"
+	stubCmd   = "./testdata/stubcmd"
 )
-
-const stubCmd = "testdata/stubcmd"
 
 func init() {
 	if runtime.GOOS == "windows" {
 		shellcmd = "cmd"
 		shellflag = "/c"
+		stubCmd = `.\testdata\stubcmd.exe`
 	}
 	err := exec.Command("go", "build", "-o", stubCmd, "testdata/stubcmd.go").Run()
 	if err != nil {
@@ -146,9 +146,19 @@ func TestRunSimple(t *testing.T) {
 }
 
 func TestRunContext(t *testing.T) {
-	expectedCode := 143
+	expect := ExitStatus{
+		Code:     128 + int(syscall.SIGTERM),
+		Signaled: true,
+		typ:      exitTypeCanceled,
+		killed:   false,
+	}
 	if isWin {
-		expectedCode = exitKilled
+		expect = ExitStatus{
+			Code:     1,
+			Signaled: false,
+			typ:      exitTypeCanceled,
+			killed:   true,
+		}
 	}
 
 	t.Run("cancel", func(t *testing.T) {
@@ -165,12 +175,6 @@ func TestRunContext(t *testing.T) {
 		if err != nil {
 			t.Errorf("error should be nil but: %s", err)
 		}
-		expect := ExitStatus{
-			Code:     expectedCode,
-			Signaled: true,
-			typ:      exitTypeCanceled,
-			killed:   false,
-		}
 		if !reflect.DeepEqual(expect, *st) {
 			t.Errorf("invalid exit status\n   out: %v\nexpect: %v", *st, expect)
 		}
@@ -186,12 +190,6 @@ func TestRunContext(t *testing.T) {
 		st, err := tio.RunContext(ctx)
 		if err != nil {
 			t.Errorf("error should be nil but: %s", err)
-		}
-		expect := ExitStatus{
-			Code:     expectedCode,
-			Signaled: true,
-			typ:      exitTypeCanceled,
-			killed:   false,
 		}
 		if !reflect.DeepEqual(expect, *st) {
 			t.Errorf("invalid exit status\n   out: %v\nexpect: %v", *st, expect)
