@@ -34,12 +34,20 @@ const (
 
 // Error is error of timeout
 type Error struct {
-	ExitCode int
-	Err      error
+	exitCode int
+	err      error
 }
 
 func (err *Error) Error() string {
-	return fmt.Sprintf("exit code: %d, %s", err.ExitCode, err.Err.Error())
+	return fmt.Sprintf("exit code: %d, %s", err.exitCode, err.err.Error())
+}
+
+func (err *Error) ExitCode() int {
+	return err.exitCode
+}
+
+func (err *Error) Err() error {
+	return err.err
 }
 
 // ExitStatus stores exit information of the command
@@ -130,7 +138,7 @@ func (tio *Timeout) RunSimple(preserveStatus bool) int {
 func getExitCodeFromErr(err error) int {
 	if err != nil {
 		if tmerr, ok := err.(*Error); ok {
-			return tmerr.ExitCode
+			return tmerr.exitCode
 		}
 		return -1
 	}
@@ -143,8 +151,8 @@ func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
 
 	if err := cmd.Start(); err != nil {
 		return nil, &Error{
-			ExitCode: wrapcommander.ResolveExitCode(err),
-			Err:      err,
+			exitCode: wrapcommander.ResolveExitCode(err),
+			err:      err,
 		}
 	}
 
