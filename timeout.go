@@ -42,49 +42,6 @@ func (err *Error) Error() string {
 	return fmt.Sprintf("exit code: %d, %s", err.ExitCode, err.Err.Error())
 }
 
-// ExitStatus stores exit information of the command
-type ExitStatus struct {
-	Code     int
-	Signaled bool
-	typ      exitType
-}
-
-// IsTimedOut returns the command timed out or not
-func (ex ExitStatus) IsTimedOut() bool {
-	return ex.typ == exitTypeTimedOut || ex.typ == exitTypeKilled
-}
-
-// IsKilled returns the command is killed or not
-func (ex ExitStatus) IsKilled() bool {
-	return ex.typ == exitTypeKilled
-}
-
-// GetExitCode gets the exit code for command line tools
-func (ex ExitStatus) GetExitCode() int {
-	switch {
-	case ex.IsKilled():
-		return exitKilled
-	case ex.IsTimedOut():
-		return exitTimedOut
-	default:
-		return ex.Code
-	}
-}
-
-// GetChildExitCode gets the exit code of the Cmd itself
-func (ex ExitStatus) GetChildExitCode() int {
-	return ex.Code
-}
-
-type exitType int
-
-// exit types
-const (
-	exitTypeNormal exitType = iota
-	exitTypeTimedOut
-	exitTypeKilled
-)
-
 func (tio *Timeout) signal() os.Signal {
 	if tio.Signal == nil {
 		return defaultSignal
@@ -93,7 +50,7 @@ func (tio *Timeout) signal() os.Signal {
 }
 
 // Run is synchronous interface of executing command and returning information
-func (tio *Timeout) Run() (ExitStatus, string, string, error) {
+func (tio *Timeout) Run() (*ExitStatus, string, string, error) {
 	cmd := tio.getCmd()
 	var outBuffer, errBuffer bytes.Buffer
 	cmd.Stdout = &outBuffer
@@ -102,7 +59,7 @@ func (tio *Timeout) Run() (ExitStatus, string, string, error) {
 	ch, err := tio.RunCommand()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		return ExitStatus{}, string(outBuffer.Bytes()), string(errBuffer.Bytes()), err
+		return nil, string(outBuffer.Bytes()), string(errBuffer.Bytes()), err
 	}
 	exitSt := <-ch
 	return exitSt, string(outBuffer.Bytes()), string(errBuffer.Bytes()), nil
@@ -138,7 +95,7 @@ func getExitCodeFromErr(err error) int {
 }
 
 // RunCommand is executing the command and handling timeout. This is primitive interface of Timeout
-func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
+func (tio *Timeout) RunCommand() (chan *ExitStatus, error) {
 	cmd := tio.getCmd()
 
 	if err := cmd.Start(); err != nil {
@@ -148,7 +105,7 @@ func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
 		}
 	}
 
-	exitChan := make(chan ExitStatus)
+	exitChan := make(chan *ExitStatus)
 	go func() {
 		exitChan <- tio.handleTimeout()
 	}()
@@ -156,7 +113,8 @@ func (tio *Timeout) RunCommand() (chan ExitStatus, error) {
 	return exitChan, nil
 }
 
-func (tio *Timeout) handleTimeout() (ex ExitStatus) {
+func (tio *Timeout) handleTimeout() *ExitStatus {
+	ex := &ExitStatus{}
 	cmd := tio.getCmd()
 	exitChan := getExitChan(cmd)
 	var killCh <-chan time.Time
