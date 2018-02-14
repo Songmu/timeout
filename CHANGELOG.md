@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.3.0](https://github.com/Songmu/timeout/compare/v0.2.1...v0.3.0) (2018-02-14)
+
+* Context support with RunContext method [#16](https://github.com/Songmu/timeout/pull/16) ([Songmu](https://github.com/Songmu))
+* [incompatible] use pointer when returning ExitStatus [#17](https://github.com/Songmu/timeout/pull/17) ([Songmu](https://github.com/Songmu))
+* test for signaled [#15](https://github.com/Songmu/timeout/pull/15) ([Songmu](https://github.com/Songmu))
+
 ## [v0.2.1](https://github.com/Songmu/timeout/compare/v0.2.0...v0.2.1) (2018-01-07)
 
 * send SIGCONT after sending termination signal just to make sure [#14](https://github.com/Songmu/timeout/pull/14) ([Songmu](https://github.com/Songmu))
