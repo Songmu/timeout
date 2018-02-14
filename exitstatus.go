@@ -5,6 +5,7 @@ type ExitStatus struct {
 	Code     int
 	Signaled bool
 	typ      exitType
+	killed   bool
 }
 
 // IsTimedOut returns the command timed out or not
@@ -12,9 +13,14 @@ func (ex *ExitStatus) IsTimedOut() bool {
 	return ex.typ == exitTypeTimedOut || ex.typ == exitTypeKilled
 }
 
+// IsCanceled return if the command canceled by context or not
+func (ex *ExitStatus) IsCanceled() bool {
+	return ex.typ == exitTypeCanceled
+}
+
 // IsKilled returns the command is killed or not
 func (ex *ExitStatus) IsKilled() bool {
-	return ex.typ == exitTypeKilled
+	return ex.killed
 }
 
 // GetExitCode gets the exit code for command line tools
@@ -41,4 +47,5 @@ const (
 	exitTypeNormal exitType = iota
 	exitTypeTimedOut
 	exitTypeKilled
+	exitTypeCanceled
 )

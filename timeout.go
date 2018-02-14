@@ -3,6 +3,7 @@ package timeout
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,18 +13,6 @@ import (
 	"github.com/Songmu/wrapcommander"
 )
 
-// overwritten with syscall.SIGTERM on unix environment (see timeout_unix.go)
-var defaultSignal = os.Interrupt
-
-// Timeout is main struct of timeout package
-type Timeout struct {
-	Duration   time.Duration
-	KillAfter  time.Duration
-	Signal     os.Signal
-	Foreground bool
-	Cmd        *exec.Cmd
-}
-
 // exit statuses are same with GNU timeout
 const (
 	exitNormal     = 0
@@ -31,6 +20,9 @@ const (
 	exitUnknownErr = 125
 	exitKilled     = 137
 )
+
+// overwritten with syscall.SIGTERM on unix environment (see timeout_unix.go)
+var defaultSignal = os.Interrupt
 
 // Error is error of timeout
 type Error struct {
@@ -40,6 +32,17 @@ type Error struct {
 
 func (err *Error) Error() string {
 	return fmt.Sprintf("exit code: %d, %s", err.ExitCode, err.Err.Error())
+}
+
+// Timeout is main struct of timeout package
+type Timeout struct {
+	Duration   time.Duration
+	KillAfter  time.Duration
+	Signal     os.Signal
+	Foreground bool
+	Cmd        *exec.Cmd
+
+	KillAfterCancel time.Duration
 }
 
 func (tio *Timeout) signal() os.Signal {
@@ -94,32 +97,47 @@ func getExitCodeFromErr(err error) int {
 	return exitNormal
 }
 
-// RunCommand is executing the command and handling timeout. This is primitive interface of Timeout
-func (tio *Timeout) RunCommand() (chan *ExitStatus, error) {
-	cmd := tio.getCmd()
+// RunContext runs command with context
+func (tio *Timeout) RunContext(ctx context.Context) (*ExitStatus, error) {
+	if err := tio.start(); err != nil {
+		return nil, err
+	}
+	return tio.wait(ctx), nil
+}
 
-	if err := cmd.Start(); err != nil {
-		return nil, &Error{
-			ExitCode: wrapcommander.ResolveExitCode(err),
-			Err:      err,
-		}
+// RunCommand is executing the command and handling timeout. This is primitive interface of Timeout
+func (tio *Timeout) RunCommand() (<-chan *ExitStatus, error) {
+	if err := tio.start(); err != nil {
+		return nil, err
 	}
 
 	exitChan := make(chan *ExitStatus)
 	go func() {
-		exitChan <- tio.handleTimeout()
+		exitChan <- tio.wait(context.Background())
 	}()
-
 	return exitChan, nil
 }
 
-func (tio *Timeout) handleTimeout() *ExitStatus {
+func (tio *Timeout) start() error {
+	if err := tio.getCmd().Start(); err != nil {
+		return &Error{
+			ExitCode: wrapcommander.ResolveExitCode(err),
+			Err:      err,
+		}
+	}
+	return nil
+}
+
+func (tio *Timeout) wait(ctx context.Context) *ExitStatus {
 	ex := &ExitStatus{}
 	cmd := tio.getCmd()
 	exitChan := getExitChan(cmd)
-	var killCh <-chan time.Time
+	killCh := make(chan struct{})
 	if tio.KillAfter > 0 {
-		killCh = time.After(tio.Duration + tio.KillAfter)
+		go func() {
+			time.Sleep(tio.Duration + tio.KillAfter)
+			killCh <- struct{}{}
+		}()
 	}
 	for {
 		select {
@@ -134,9 +152,27 @@ func (tio *Timeout) handleTimeout() *ExitStatus {
 			tio.killall()
 			// just to make sure
 			cmd.Process.Kill()
-			ex.typ = exitTypeKilled
+			ex.killed = true
+			if ex.typ != exitTypeCanceled {
+				ex.typ = exitTypeKilled
+			}
+		case <-ctx.Done():
+			// XXX handling etx.Err()?
+			tio.terminate()
+			ex.typ = exitTypeCanceled
+			go func() {
+				time.Sleep(tio.getKillAfterCancel())
+				killCh <- struct{}{}
+			}()
 		}
 	}
+}
+
+func (tio *Timeout) getKillAfterCancel() time.Duration {
+	if tio.KillAfterCancel == 0 {
+		return 3 * time.Second
+	}
+	return tio.KillAfterCancel
 }
 
 func getExitChan(cmd *exec.Cmd) chan syscall.WaitStatus {

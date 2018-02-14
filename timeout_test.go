@@ -1,8 +1,11 @@
 package timeout
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"os/exec"
+	"reflect"
 	"runtime"
 	"strings"
 	"syscall"
@@ -13,12 +16,18 @@ import (
 var (
 	shellcmd  = "/bin/sh"
 	shellflag = "-c"
+	stubCmd   = "./testdata/stubcmd"
 )
 
 func init() {
 	if runtime.GOOS == "windows" {
 		shellcmd = "cmd"
 		shellflag = "/c"
+		stubCmd = `.\testdata\stubcmd.exe`
+	}
+	err := exec.Command("go", "build", "-o", stubCmd, "testdata/stubcmd.go").Run()
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -63,39 +72,39 @@ func TestRunSimple(t *testing.T) {
 		},
 		{
 			name:         "timed out",
-			cmd:          exec.Command(shellcmd, shellflag, "sleep 3"),
-			duration:     1 * time.Second,
+			cmd:          exec.Command(shellcmd, shellflag, fmt.Sprintf("%s -sleep 3", stubCmd)),
+			duration:     100 * time.Millisecond,
 			signal:       os.Interrupt,
 			expectedExit: 124,
 		},
 		{
 			name:           "timed out with preserve status",
-			cmd:            exec.Command(shellcmd, shellflag, "sleep 3"),
+			cmd:            exec.Command(shellcmd, shellflag, fmt.Sprintf("%s -sleep 3", stubCmd)),
 			duration:       time.Duration(0.1 * float64(time.Second)),
 			preserveStatus: true,
-			expectedExit:   128 + 15,
+			expectedExit:   128 + int(syscall.SIGTERM),
 			skipOnWin:      true,
 		},
 		{
-			name:           "preserve status (signal handled)",
-			cmd:            exec.Command("perl", "testdata/exit_with_23.pl"),
-			duration:       1 * time.Second,
+			name:           "preserve status (signal trapd)",
+			cmd:            exec.Command(stubCmd, "-trap", "SIGTERM", "-trap-exit", "23", "-sleep", "3"),
+			duration:       100 * time.Millisecond,
 			preserveStatus: true,
 			expectedExit:   23,
 			skipOnWin:      true,
 		},
 		{
 			name:         "kill after",
-			cmd:          exec.Command("perl", "testdata/ignore_sigterm.pl"),
-			duration:     1 * time.Second,
-			killAfter:    1 * time.Second,
+			cmd:          exec.Command(stubCmd, "-trap", "SIGTERM", "-sleep", "3"),
+			duration:     100 * time.Millisecond,
+			killAfter:    100 * time.Microsecond,
 			signal:       syscall.SIGTERM,
 			expectedExit: exitKilled,
 		},
 		{
-			name:           "ignore sigterm but exited before kill after",
-			cmd:            exec.Command("perl", "testdata/ignore_sigterm.pl"),
-			duration:       1 * time.Second,
+			name:           "trap sigterm but exited before kill after",
+			cmd:            exec.Command(stubCmd, "-trap", "SIGTERM", "-sleep", "0.8"),
+			duration:       100 * time.Millisecond,
 			killAfter:      5 * time.Second,
 			signal:         syscall.SIGTERM,
 			preserveStatus: true,
@@ -109,8 +118,8 @@ func TestRunSimple(t *testing.T) {
 			skipOnWin:    true,
 		},
 		{
-			name:         "command cannnot be invoked",
-			cmd:          exec.Command("testdata/ignore_sigterm.pl-xxxxxxxxxxxxxxxxxxxxx"),
+			name:         "command cannnot be invoked (command not found)",
+			cmd:          exec.Command("testdata/command-not-found"),
 			duration:     1 * time.Second,
 			expectedExit: 127, // TODO cmd should return 125 on win
 			skipOnWin:    true,
@@ -134,4 +143,82 @@ func TestRunSimple(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunContext(t *testing.T) {
+	expect := ExitStatus{
+		Code:     128 + int(syscall.SIGTERM),
+		Signaled: true,
+		typ:      exitTypeCanceled,
+		killed:   false,
+	}
+	if isWin {
+		expect = ExitStatus{
+			Code:     1,
+			Signaled: false,
+			typ:      exitTypeCanceled,
+			killed:   true,
+		}
+	}
+
+	t.Run("cancel", func(t *testing.T) {
+		tio := &Timeout{
+			Duration: 3 * time.Second,
+			Cmd:      exec.Command(stubCmd, "-sleep", "10"),
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			cancel()
+		}()
+		st, err := tio.RunContext(ctx)
+		if err != nil {
+			t.Errorf("error should be nil but: %s", err)
+		}
+		if !reflect.DeepEqual(expect, *st) {
+			t.Errorf("invalid exit status\n   out: %v\nexpect: %v", *st, expect)
+		}
+	})
+
+	t.Run("with timeout", func(t *testing.T) {
+		tio := &Timeout{
+			Duration: 3 * time.Second,
+			Cmd:      exec.Command(stubCmd, "-sleep", "10"),
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+		st, err := tio.RunContext(ctx)
+		if err != nil {
+			t.Errorf("error should be nil but: %s", err)
+		}
+		if !reflect.DeepEqual(expect, *st) {
+			t.Errorf("invalid exit status\n   out: %v\nexpect: %v", *st, expect)
+		}
+	})
+
+	t.Run("with timeout and signal trapped", func(t *testing.T) {
+		if isWin {
+			t.Skip("skip on windows")
+		}
+		tio := &Timeout{
+			Duration:        3 * time.Second,
+			Cmd:             exec.Command(stubCmd, "-sleep", "10", "-trap", "SIGTERM"),
+			KillAfterCancel: time.Duration(10 * time.Millisecond),
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+		st, err := tio.RunContext(ctx)
+		if err != nil {
+			t.Errorf("error should be nil but: %s", err)
+		}
+		expect := ExitStatus{
+			Code:     exitKilled,
+			Signaled: true,
+			typ:      exitTypeCanceled,
+			killed:   true,
+		}
+		if !reflect.DeepEqual(expect, *st) {
+			t.Errorf("invalid exit status\n   out: %v\nexpect: %v", *st, expect)
+		}
+	})
 }
