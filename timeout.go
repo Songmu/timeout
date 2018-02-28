@@ -132,12 +132,21 @@ func (tio *Timeout) wait(ctx context.Context) *ExitStatus {
 	ex := &ExitStatus{}
 	cmd := tio.getCmd()
 	exitChan := getExitChan(cmd)
-	killCh := make(chan struct{})
-	if tio.KillAfter > 0 {
-		go func() {
-			time.Sleep(tio.Duration + tio.KillAfter)
+	killCh := make(chan struct{}, 2)
+	done := make(chan struct{})
+	defer close(done)
+
+	delayedKill := func(dur time.Duration) {
+		select {
+		case <-done:
+			return
+		case <-time.After(dur):
 			killCh <- struct{}{}
-		}()
+		}
+	}
+
+	if tio.KillAfter > 0 {
+		go delayedKill(tio.Duration + tio.KillAfter)
 	}
 	for {
 		select {
@@ -160,10 +169,7 @@ func (tio *Timeout) wait(ctx context.Context) *ExitStatus {
 			// XXX handling etx.Err()?
 			tio.terminate()
 			ex.typ = exitTypeCanceled
-			go func() {
-				time.Sleep(tio.getKillAfterCancel())
-				killCh <- struct{}{}
-			}()
+			go delayedKill(tio.getKillAfterCancel())
 		}
 	}
 }
