@@ -222,3 +222,23 @@ func TestRunContext(t *testing.T) {
 		}
 	})
 }
+
+func TestRun_leak(t *testing.T) {
+	beforeGoroutine := runtime.NumGoroutine()
+	for range make([]struct{}, 30) {
+		tio := &Timeout{
+			Cmd:       exec.Command(stubCmd, "-sleep=0.1"),
+			Duration:  time.Second,
+			KillAfter: time.Second,
+		}
+		go func() {
+			tio.Run()
+		}()
+	}
+	time.Sleep(time.Second)
+	afterGoroutine := runtime.NumGoroutine()
+
+	if beforeGoroutine+10 < afterGoroutine {
+		t.Errorf("goroutine may be leaked. before: %d, after: %d", beforeGoroutine, afterGoroutine)
+	}
+}
