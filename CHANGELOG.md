@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.3.1](https://github.com/Songmu/timeout/compare/v0.3.0...v0.3.1) (2018-03-04)
+
+* add rough test to detect goroutine leak [#20](https://github.com/Songmu/timeout/pull/20) ([Songmu](https://github.com/Songmu))
+* fix goroutine leak [#19](https://github.com/Songmu/timeout/pull/19) ([Songmu](https://github.com/Songmu))
+
 ## [v0.3.0](https://github.com/Songmu/timeout/compare/v0.2.1...v0.3.0) (2018-02-14)
 
 * Context support with RunContext method [#16](https://github.com/Songmu/timeout/pull/16) ([Songmu](https://github.com/Songmu))
