@@ -5,5 +5,5 @@ environment:
 build: false
 test_script:
 - go get -d -v -t ./...
-- go tool vet -all .
+- go vet
 - go test ./...
