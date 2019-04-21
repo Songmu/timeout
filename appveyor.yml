@@ -3,6 +3,9 @@ clone_folder: c:\gopath\src\github.com\Songmu\timeout
 environment:
   GOPATH: c:\gopath
 build: false
+install:
+- copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe
+- set PATH=%GOROOT%\bin;%GOPATH%\bin;c:\MinGW\bin;%PATH%
 test_script:
 - make lint
 - make test
