@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.4.0](https://github.com/Songmu/timeout/compare/v0.3.1...v0.4.0) (2019-04-21)
+
+* introduce Go Modules [#21](https://github.com/Songmu/timeout/pull/21) ([Songmu](https://github.com/Songmu))
+
 ## [v0.3.1](https://github.com/Songmu/timeout/compare/v0.3.0...v0.3.1) (2018-03-04)
 
 * add rough test to detect goroutine leak [#20](https://github.com/Songmu/timeout/pull/20) ([Songmu](https://github.com/Songmu))
