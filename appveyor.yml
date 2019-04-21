@@ -4,6 +4,5 @@ environment:
   GOPATH: c:\gopath
 build: false
 test_script:
-- go get -d -v -t ./...
-- go vet
-- go test ./...
+- make lint
+- make test
