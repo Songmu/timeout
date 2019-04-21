@@ -1,2 +1,4 @@
 github.com/Songmu/wrapcommander v0.1.0 h1:y8/yk9/PHT983weH+ehZIOJ7JtwAlI1AkfUpUNCj1SY=
 github.com/Songmu/wrapcommander v0.1.0/go.mod h1:EC2y4OnN8PkdMnaCwcSzItewq+f0yqUvS30kcS4vmn0=
+github.com/pborman/getopt v0.0.0-20190409184431-ee0cd42419d3 h1:YtFkrqsMEj7YqpIhRteVxJxCeC3jJBieuLr0d4C4rSA=
+github.com/pborman/getopt v0.0.0-20190409184431-ee0cd42419d3/go.mod h1:85jBQOZwpVEaDAr341tbn15RS4fCAsIst0qp7i8ex1o=
